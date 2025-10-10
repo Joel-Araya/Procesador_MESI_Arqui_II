@@ -1,0 +1,6 @@
+; PE2: Lee valor en addr 16, incrementa dos veces y guarda en addr 16
+LOAD R0, 16
+INC R0
+INC R0
+STORE R0, 16
+HALT
