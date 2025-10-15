@@ -18,8 +18,9 @@
 
 #include "PE/ProcessorSystem.hpp"
 #include "PE/Instruction.hpp"
-#include "PE/SharedMemory.hpp"
 #include "PE/ProgramLoader.hpp"
+#include "PE/MemoryFacade.hpp"
+#include "PE/SharedMemoryInstance.hpp"
 
 
 // Funcion de prueba del comportamiento de un PE/Cache
@@ -176,9 +177,68 @@ void test_memory(){
 }
 
 
+void processor_system_with_memory_facade(){
+    ProcessorSystem system;
+    Memory memory;
+    
+    std::vector<CacheL1*> caches;
+    for (int i = 0; i < 4; ++i) {
+        caches.push_back(new CacheL1(i, &memory));
+    }
+
+    BusInterconnect bus(caches, &memory);
+
+    std::vector<MemoryFacade*> memory_facades;
+    for (int i = 0; i < 4; ++i) {
+        memory_facades.push_back(new MemoryFacade(caches[i], &bus, i));
+    }
+
+    // Inicializar memoria con valores base 10,20,30,40 en direcciones 0,32,64,96
+    memory.write_block(0, (new uint8_t[1]{10}));
+    memory.write_block(32, (new uint8_t[1]{20}));
+    memory.write_block(64, (new uint8_t[1]{30}));
+    memory.write_block(96, (new uint8_t[1]{40}));
+
+    uint8_t data = 0;
+    // std::cout << "Initial memory contents:\n";
+    for (size_t j = 0; j < 4; ++j) {
+        memory.read_block(j * 32, &data);
+        std::cout << "Mem[" << j * 32 << "] = " << static_cast<int>(data) << "\n";
+    }
+
+    // Cargar archivos .pec
+    std::vector<Instruction> p0 = loadProgramFile("pe0.pec");
+    std::vector<Instruction> p1 = loadProgramFile("pe1.pec");
+    std::vector<Instruction> p2 = loadProgramFile("pe2.pec");
+    std::vector<Instruction> p3 = loadProgramFile("pe3.pec");
+
+    // // Adjuntar memoria y cargar programas
+    for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) {
+        system.getPE(i).attachMemory(memory_facades[i]);
+    }
+    system.loadProgram(0, p0);
+    system.loadProgram(1, p1);
+    system.loadProgram(2, p2);
+    system.loadProgram(3, p3);
+
+    // Lanzar todos usando su programa (funcion nula)
+    for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) {
+        system.getPE(i).start(nullptr);
+    }
+
+    system.joinAll();
+
+    std::cout << "Final memory contents:\n";
+    for (size_t j = 0; j < 4; ++j) {
+        memory.read_block(j * 32, &data);
+        std::cout << "Mem[" << j * 32 << "] = " << static_cast<int>(data) << "\n";
+    }
+}
+
+
 void processor_system(){
         ProcessorSystem system;
-    SharedMemory mem(256); // suficiente para nuestras posiciones
+    SharedMemoryInstance mem(256); // suficiente para nuestras posiciones
 
     // Inicializar memoria con valores base 10,20,30,40 en direcciones 0,8,16,24
     mem.store(0, 10);
@@ -214,13 +274,13 @@ void processor_system(){
     std::cout << "Mem[24] = " << mem.load(24) << " (esperado 43)\n";
 }
 
-
 int main(int argc, char* argv[]) {
-    test_interconnect_concurrency();
+    // test_interconnect_concurrency();
     //std::cout << "\n\n";
     //test_memory();
     //std::cout << "\n\n";
-    //processor_system();
-
+    // processor_system();
+    //std::cout << "\n\n";
+    processor_system_with_memory_facade();
     return 0;
 }

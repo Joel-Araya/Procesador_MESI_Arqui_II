@@ -24,7 +24,7 @@ public:
     void read_bytes(uint64_t address, uint8_t* out_buf, size_t n) const;
 
 private:
-    std::array<uint8_t, MEM_BYTES> mem_;
+    std::array<uint8_t, MEM_BYTES> mem_ = std::array<uint8_t, MEM_BYTES>{0};
     uint64_t align_addr(uint64_t address) const;
 };
 
