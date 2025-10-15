@@ -13,14 +13,18 @@ UTILS = $(SRCDIR)/utils
 # Archivo ejecutable final
 TARGET = sim_mesi
 
+
 # ==============================================================================
 # ARCHIVOS FUENTE Y OBJETOS
 # ==============================================================================
 
 # Lista explícita de todos los archivos fuente
 SRCS = $(SRCDIR)/main.cpp \
-       $(INTERCONNECT)/BusInterconnect.cpp
-	   
+       $(INTERCONNECT)/BusInterconnect.cpp \
+       $(COMPONENTS)/cacheL1.cpp \
+       $(COMPONENTS)/memory.cpp
+
+
 # Mapea src/dir/file.cpp a obj/dir/file.o
 OBJS = $(patsubst $(SRCDIR)/%.cpp, obj/%.o, $(SRCS))
 
@@ -62,6 +66,7 @@ run: all
 test: all
 	@echo "🧪 Ejecutando prueba de concurrencia básica..."
 	./$(TARGET) test_mode
+
 	
 # ------------------------------------------------------------------------------
 # Manejo de dependencias
