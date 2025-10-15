@@ -3,7 +3,7 @@
 #include <functional>
 
 
-BusInterconnect::BusInterconnect(std::vector<CacheL1_test*>& caches, Memory_test* memory)
+BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
     : caches_(caches),
     memory_(memory)
 {
@@ -83,7 +83,7 @@ void BusInterconnect::process_transaction(BusTransaction& transaction) {
     // Solo las caches observadoras (pe_id != transaction.pe_id) responden con su estado
     for (int i = 0; i < 4; ++i) {
         // Este metodo debe estar definido en la clase CacheL1
-        auto snoop_result = caches_[i]->snoop_bus(transaction);
+        auto snoop_result = caches_[i]->snoop_bus_rd(transaction.address);
 
         // Analizar el resultado:
         if (snoop_result.had_modified) {

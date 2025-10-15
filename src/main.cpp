@@ -53,10 +53,10 @@ void test_interconnect_concurrency() {
     std::cout << "======================================================\n\n";
 
     // 1. Inicializar componentes Dummy
-    Memory_test memory;
-    std::vector<CacheL1_test*> caches;
+    Memory memory;
+    std::vector<CacheL1*> caches;
     for (int i = 0; i < 4; ++i) {
-        caches.push_back(new CacheL1_test(i));
+        caches.push_back(new CacheL1(i, &memory));
     }
 
     // 2. Inicializar el Bus Interconnect
@@ -95,7 +95,7 @@ void test_interconnect_concurrency() {
     //     delete c;
     // }
     
-    // bus_thread.join()  <-- Esto causará un bloqueo si no se implementa el 'stop'
+    //bus_thread.join(); //  <-- Esto causará un bloqueo si no se implementa el 'stop'
     // en la función run() del Bus.
 }
 
@@ -129,7 +129,7 @@ void test_memory(){
     }
 
     // Ahora bus entrega el bloque a cache1 (others_have = true porque cache0 tenía la línea)
-    cache1.load_block_from_bus(addr, block.data(), /*others_have=*/true);
+    cache1.load_block_from_bus(addr, block.data(), /*others_have=*/true); // pasa a SHARED
 
     std::cout << "States after BusRd -> cache0: " << static_cast<int>(cache0.get_line_state(addr))
               << " cache1: " << static_cast<int>(cache1.get_line_state(addr)) << "\n";
@@ -216,11 +216,11 @@ void processor_system(){
 
 
 int main(int argc, char* argv[]) {
-    //test_interconnect_concurrency();
+    test_interconnect_concurrency();
     //std::cout << "\n\n";
-    test_memory();
-    std::cout << "\n\n";
-    processor_system();
+    //test_memory();
+    //std::cout << "\n\n";
+    //processor_system();
 
     return 0;
 }

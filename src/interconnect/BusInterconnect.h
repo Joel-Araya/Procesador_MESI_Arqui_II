@@ -7,12 +7,12 @@
 #include <memory>
 #include "BusTransaction.h"
 #include "../utils/ConcurrentQueue.h"
-#include "../components/Memory_test.h"
-#include "../components/CacheL1_test.h"
+#include "../components/memory.h"
+#include "../components/cacheL1.h"
 
 class BusInterconnect {
 public:
-    BusInterconnect(std::vector<CacheL1_test*>& caches, Memory_test* memory);
+    BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory);
     ~BusInterconnect();
 
     // Funcion que se ejecuta en el hilo del Bus
@@ -30,8 +30,8 @@ private:
     ConcurrentQueue<BusTransaction> request_queue_;
 
     // Punteros a los otros modulos para invocar Snooping y accesos a Memoria
-    std::vector<CacheL1_test*>& caches_;
-    Memory_test* memory_;
+    std::vector<CacheL1*>& caches_;
+    Memory* memory_;
 
     // Logica de Arbitraje y Proceso MESI
     void arbitrate_and_process();
