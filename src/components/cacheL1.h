@@ -5,7 +5,7 @@
 #include <array>
 #include <iostream>
 #include "memory.h"
-#include "../interconnect/BusEnunms.h"
+#include "../interconnect/BusEnums.h"
 #include "../utils/metrics.h"
 #include "cacheLine.h"
 

@@ -3,12 +3,12 @@
 #include <functional>
 
 
-BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
+BusInterconnect::BusInterconnect(std::vector<CacheL1_test*>& caches, Memory_test* memory)
     : caches_(caches),
     memory_(memory)
 {
     std::cout << "BusInterconnect: Inicializando Interconector con " 
-    << caches_.size() << "caches.\n";
+    << caches_.size() << " caches.\n";
     
     // Inicializar el contador de arbitraje para empezar por PE_0
     last_granted_pe_ = 3; 

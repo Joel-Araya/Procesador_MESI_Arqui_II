@@ -1,14 +1,14 @@
-// src/components/CacheL1.h
+// src/components/CacheL1_test.h
 
-#ifndef CACHE_L1_H
-#define CACHE_L1_H
+#ifndef CACHE_L1_TEST_H
+#define CACHE_L1_TEST_H
 
 #include <cstdint>
 #include <chrono>
 #include <thread>
 #include "../interconnect/BusTransaction.h" // Necesaria para el argumento BusTransaction
 
-class CacheL1 { 
+class CacheL1_test { 
 public:
     int id;
     
@@ -18,7 +18,7 @@ public:
         bool had_shared = false; 
     };
 
-    CacheL1(int i) : id(i) {}
+    CacheL1_test(int i) : id(i) {}
 
     // ⭐️ FUNCIÓN CRÍTICA: La interfaz para el Bus (Snooping) ⭐️
     SnoopResult snoop_bus(const BusTransaction& transaction) {
@@ -41,4 +41,4 @@ public:
     }
 };
 
-#endif // CACHE_L1_H
+#endif // CACHE_L1_TEST_H
