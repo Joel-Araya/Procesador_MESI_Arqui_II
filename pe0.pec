@@ -1,0 +1,5 @@
+; PE0: Lee valor en addr 0, suma 0 (nada) y guarda en addr 0
+LOAD R0, 0
+; R0 ya contiene el valor, no se modifica
+STORE R0, 0
+HALT
