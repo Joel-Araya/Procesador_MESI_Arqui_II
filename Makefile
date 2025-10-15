@@ -45,7 +45,7 @@ $(TARGET): obj $(OBJS)
 
 # 2. Regla para crear el directorio de objetos (asegura que obj/components exista)
 obj:
-	@mkdir -p obj/components obj/interconnect obj/utils
+	@mkdir -p obj/components obj/interconnect obj/utils obj/PE
 
 # 3. Regla general para compilar archivos .cpp a .o (Pattern Rule)
 # Compila cualquier archivo .cpp en el directorio fuente o subdirectorios
