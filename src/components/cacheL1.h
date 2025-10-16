@@ -44,6 +44,8 @@ public:
 
     void print_metrics() const;
 
+    static constexpr int BLOCK_BYTES = 32;
+
 private:
     int id_;
     Memory* memory_;
@@ -51,7 +53,6 @@ private:
 
     static constexpr int SETS = 8;      // 8 sets
     static constexpr int WAYS = 2;      // 2-way
-    static constexpr int BLOCK_BYTES = 32;
 
     std::array<std::array<CacheLine, WAYS>, SETS> sets_;
 

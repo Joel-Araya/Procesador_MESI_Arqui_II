@@ -10,6 +10,7 @@ COMPONENTS = $(SRCDIR)/components
 INTERCONNECT = $(SRCDIR)/interconnect
 UTILS = $(SRCDIR)/utils
 PE = $(SRCDIR)/PE
+TESTS = $(SRCDIR)/tests
 
 # Archivo ejecutable final
 TARGET = sim_mesi
@@ -21,6 +22,7 @@ TARGET = sim_mesi
 
 # Lista explícita de todos los archivos fuente
 SRCS = $(SRCDIR)/main.cpp \
+	   $(TESTS)/test_BI.cpp \
        $(INTERCONNECT)/BusInterconnect.cpp \
        $(COMPONENTS)/cacheL1.cpp \
        $(COMPONENTS)/memory.cpp \

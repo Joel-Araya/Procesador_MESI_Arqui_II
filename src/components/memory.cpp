@@ -1,6 +1,7 @@
 #include "memory.h"
 #include <cstring>
 #include <stdexcept>
+#include <iomanip>
 
 Memory::Memory() {
     mem_.fill(0);
