@@ -111,7 +111,7 @@ void BusInterconnect::process_transaction(BusTransaction& transaction) {
         others_have = false;
         std::cout << "\t-> Escritura (BusRdX): Garantizando estado EXCLUSIVE para PE " << transaction.pe_id << ".\n";
     } else {
-        std::cout << "\t-> Lectura (BusRd): Estado final es." << (others_have ? " SHARED" : " EXCLUSIVE") << ".\n";
+        std::cout << "\t-> Lectura (BusRd): Estado final es " << (others_have ? "SHARED" : "EXCLUSIVE") << ".\n";
     }
 
     caches_[transaction.pe_id]->load_block_from_bus(

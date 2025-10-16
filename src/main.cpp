@@ -23,6 +23,16 @@
 #include "PE/SharedMemoryInstance.hpp"
 
 
+std::string get_mesi_state_name(MESI_State state) {
+    switch (state) {
+        case MESI_State::MODIFIED: return "MODIFIED (M)";
+        case MESI_State::EXCLUSIVE: return "EXCLUSIVE (E)";
+        case MESI_State::SHARED: return "SHARED (S)";
+        case MESI_State::INVALID: return "INVALID (I)";
+        default: return "UNKNOWN";
+    }
+}
+
 // Funcion de prueba del comportamiento de un PE/Cache
 void pe_activity(int pe_id, BusInterconnect& bus, uint64_t address_base, int num_reads, int num_writes) {
     std::cout << "--> [PE " << pe_id << "] Iniciando actividad: " << num_reads << " lecturas, " << num_writes << " escrituras.\n";
@@ -97,19 +107,37 @@ void test_interconnect_full_mesi() {
     std::cout << "  VERIFICACIÓN FINAL DE ESTADOS DE CACHÉ\n";
     std::cout << "======================================================\n";
     
-    // Verificar el estado de la línea 0x1000 (debe estar en S para PE 0 y PE 2)
+    // --- Bloque 0x100 (Lecturas compartidas) ---
+    // EXPECTED: PE 0 (S), PE 2 (S), PE 1 (I), PE 3 (I)
     std::cout << "Estado de 0x100:\n";
     for (int i = 0; i < 4; ++i) {
-        MESI_State state = caches[i]->get_line_state(0x100);
-        std::cout << " - PE " << i << ": " << bus.get_command_name((BusCommand)state) << " (" << (state == MESI_State::SHARED ? "OK" : "FAIL") << ")\n";
+        MESI_State state = caches[i]->get_line_state(0x100); // Se usa la dirección base
+        
+        bool expected_shared = (i == 0 || i == 2); 
+        // PE 0 y PE 2 realizaron BusRd de un bloque compartido, deben terminar en S
+        MESI_State expected_state = expected_shared ? MESI_State::SHARED : MESI_State::INVALID;
+
+        bool success = (state == expected_state);
+
+        std::cout << " - PE " << i << ": " << get_mesi_state_name(state) 
+                  << " (" << (success ? "OK" : "FALLÓ") << ". Esperado: " 
+                  << get_mesi_state_name(expected_state) << ")\n";
     }
 
-    // Verificar el estado de la línea 0x4000 (el último PE que escribió debe tener M)
-    // El orden de arbitraje determinará quién tiene M.
-    std::cout << "\nEstado de 0x400:\n";
+    // --- Bloque 0x800 (Escritura exclusiva final) ---
+    // EXPECTED: PE 1 (E/M), PE 0, 2, 3 (I)
+    std::cout << "\nEstado de 0x800:\n";
     for (int i = 0; i < 4; ++i) {
-        MESI_State state = caches[i]->get_line_state(0x400);
-        std::cout << " - PE " << i << ": " << bus.get_command_name((BusCommand)state) << "\n";
+        MESI_State state = caches[i]->get_line_state(0x800); // Se usa la dirección base
+        
+        // El último en escribir fue PE 1 (BusRdX @ 0x800)
+        MESI_State expected_state = (i == 1) ? MESI_State::EXCLUSIVE : MESI_State::INVALID; 
+        
+        bool success = (state == expected_state || (i==1 && state == MESI_State::MODIFIED));
+        
+        std::cout << " - PE " << i << ": " << get_mesi_state_name(state) 
+                  << " (" << (success ? "OK" : "FALLÓ") << ". Esperado: " 
+                  << get_mesi_state_name(expected_state) << ")\n";
     }
 
     // 7. Limpieza
@@ -295,12 +323,12 @@ void processor_system(){
 }
 
 int main(int argc, char* argv[]) {
-    // test_interconnect_full_mesi();
-    //std::cout << "\n\n";
-    //test_memory();
-    //std::cout << "\n\n";
+    test_interconnect_full_mesi();
+    // std::cout << "\n\n";
+    // test_memory();
+    // std::cout << "\n\n";
     // processor_system();
-    //std::cout << "\n\n";
-    processor_system_with_memory_facade();
+    // std::cout << "\n\n";
+    // processor_system_with_memory_facade();
     return 0;
 }
