@@ -10,7 +10,6 @@ COMPONENTS = $(SRCDIR)/components
 INTERCONNECT = $(SRCDIR)/interconnect
 UTILS = $(SRCDIR)/utils
 PE = $(SRCDIR)/PE
-TESTS = $(SRCDIR)/tests
 
 # Archivo ejecutable final
 TARGET = sim_mesi
