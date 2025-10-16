@@ -22,7 +22,6 @@ TARGET = sim_mesi
 
 # Lista explícita de todos los archivos fuente
 SRCS = $(SRCDIR)/main.cpp \
-	   $(TESTS)/test_BI.cpp \
        $(INTERCONNECT)/BusInterconnect.cpp \
        $(COMPONENTS)/cacheL1.cpp \
        $(COMPONENTS)/memory.cpp \
