@@ -1,5 +1,19 @@
-; PE0: Lee valor en addr 0, suma 0 (nada) y guarda en addr 0
-LOAD R0, 0
-; R0 ya contiene el valor, no se modifica
-STORE R0, 0
+; PE0 looped dot partial
+; R0 acc, R1 tmpA, R2 tmpB, R3 tmpProd, R4 ptrA, R5 ptrB, R6 stride, R7 counter
+MOVI R4, 0        ; base A
+MOVI R5, 128      ; base B
+MOVI R6, 8        ; stride (bytes per elemento)
+MOVI R7, 4        ; elementos por PE
+MOVI R0, 0        ; acumulador = 0
+LOOP0:
+LOADR R1, R4
+LOADR R2, R5
+FMUL R3, R1, R2
+FADD R0, R0, R3
+ADDI R4, 8        ; avanzar A
+ADDI R5, 8        ; avanzar B
+DEC R7
+JNZ LOOP0
+MOVI R1, 256      ; direccion resultado parcial PE0
+STORER R0, R1
 HALT

@@ -67,6 +67,21 @@ std::vector<Instruction> loadProgramFile(const std::string& path) {
             std::string label; iss >> label; Instruction inst; inst.op = OpCode::JNZ; inst.target = 0; program.push_back(inst); fixups.push_back({program.size()-1,label});
         } else if (op == "HALT") {
             program.push_back({OpCode::HALT});
+        } else if (op == "MOVI") {
+            std::string rdComma, immStr; iss >> rdComma; if (rdComma.back()==',') rdComma.pop_back(); iss >> immStr; uint64_t imm = std::stoull(immStr, nullptr, 0);
+            program.push_back({OpCode::MOVI, regIndex(rdComma), -1, -1, imm});
+        } else if (op == "ADDI") {
+            std::string rdComma, immStr; iss >> rdComma; if (rdComma.back()==',') rdComma.pop_back(); iss >> immStr; uint64_t imm = std::stoull(immStr, nullptr, 0);
+            program.push_back({OpCode::ADDI, regIndex(rdComma), -1, -1, imm});
+        } else if (op == "ADD") {
+            std::string rd, ra, rb; iss >> rd; if (rd.back()==',') rd.pop_back(); iss >> ra; if (ra.back()==',') ra.pop_back(); iss >> rb;
+            Instruction inst; inst.op = OpCode::ADD; inst.rd = regIndex(rd); inst.ra = regIndex(ra); inst.rb = regIndex(rb); program.push_back(inst);
+        } else if (op == "LOADR") {
+            std::string rd, ra; iss >> rd; if (rd.back()==',') rd.pop_back(); iss >> ra; // ra is address register
+            Instruction inst; inst.op = OpCode::LOADR; inst.rd = regIndex(rd); inst.ra = regIndex(ra); program.push_back(inst);
+        } else if (op == "STORER") {
+            std::string rs, ra; iss >> rs; if (rs.back()==',') rs.pop_back(); iss >> ra; // ra is address register
+            Instruction inst; inst.op = OpCode::STORER; inst.rd = regIndex(rs); inst.ra = regIndex(ra); program.push_back(inst);
         } else {
             throw std::runtime_error("Operacion desconocida linea " + std::to_string(lineNum) + ": " + op);
         }

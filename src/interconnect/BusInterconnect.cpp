@@ -6,7 +6,8 @@
 
 BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
     : caches_(caches),
-    memory_(memory)
+    memory_(memory),
+    running_(true)
 {
     std::cout << "BusInterconnect: Inicializando Interconector con " 
     << caches_.size() << " caches.\n";
@@ -28,6 +29,11 @@ BusInterconnect::~BusInterconnect(){
     std::cout << "BusInterconnect: Hilo de Arbitraje finalizado.\n";
 }
 
+void BusInterconnect::stop(){
+    running_.store(false);
+    if (bus_thread_.joinable()) bus_thread_.join();
+}
+
 void BusInterconnect::add_request(const BusTransaction& transaction) {
     request_queue_.push(transaction);
 }
@@ -35,7 +41,6 @@ void BusInterconnect::add_request(const BusTransaction& transaction) {
 void BusInterconnect::run() {
     while(!stop_flag_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
         if (!request_queue_.empty()) {
             std::cout << "\n[BUS] Peticiones en cola. Iniciando ciclo de Arbitraje...\n";
             arbitrate_and_process();

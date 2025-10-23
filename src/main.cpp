@@ -322,7 +322,108 @@ void processor_system(){
     std::cout << "Mem[24] = " << mem.load(24) << " (esperado 43)\n";
 }
 
+// Nueva función: prueba de producto punto distribuido en 4 PEs
+void processor_system_dot_product() {
+    std::cout << "==== Dot Product distribuido ====" << std::endl;
+    ProcessorSystem system;
+    Memory memory; // memoria compartida detrás de cachés
+
+    std::vector<CacheL1*> caches;
+    for (int i = 0; i < 4; ++i) caches.push_back(new CacheL1(i, &memory));
+    BusInterconnect bus(caches, &memory);
+
+    std::vector<MemoryFacade*> facades;
+    for (int i = 0; i < 4; ++i) facades.push_back(new MemoryFacade(caches[i], &bus, i));
+
+    auto write_block_words = [&](uint64_t base, const std::array<uint64_t,4>& words) {
+        std::array<uint8_t,32> raw{};
+        std::memcpy(raw.data(), words.data(), 32);
+        memory.write_block(base, raw.data());
+    };
+
+    for (int blk = 0; blk < 4; ++blk) {
+        std::array<uint64_t,4> aWords{}; std::array<uint64_t,4> bWords{};
+        for (int k = 0; k < 4; ++k) {
+            int idx = blk*4 + k;
+            double aVal = static_cast<double>(idx + 1);
+            double bVal = static_cast<double>(2 * (idx + 1));
+            std::memcpy(&aWords[k], &aVal, 8);
+            std::memcpy(&bWords[k], &bVal, 8);
+        }
+        write_block_words(blk * 32, aWords);
+        write_block_words(128 + blk * 32, bWords);
+    }
+    write_block_words(256, {0,0,0,0});
+
+    std::vector<Instruction> p0 = loadProgramFile("pe0.pec");
+    std::vector<Instruction> p1 = loadProgramFile("pe1.pec");
+    std::vector<Instruction> p2 = loadProgramFile("pe2.pec");
+    std::vector<Instruction> p3 = loadProgramFile("pe3.pec");
+
+    for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).attachMemory(facades[i]);
+    system.loadProgram(0, p0); system.loadProgram(1, p1); system.loadProgram(2, p2); system.loadProgram(3, p3);
+
+    for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).start(nullptr);
+    system.joinAll();
+
+    std::array<uint8_t,32> resultRaw{}; memory.read_block(256, resultRaw.data());
+    std::array<double,4> partials{}; for (int i = 0; i < 4; ++i) std::memcpy(&partials[i], resultRaw.data() + i*8, 8);
+    double finalDot = partials[0] + partials[1] + partials[2] + partials[3];
+
+    std::cout << "Parciales: "; for (double p : partials) std::cout << p << " "; std::cout << "\nDot final = " << finalDot << std::endl;
+
+    bus.stop();
+    for (auto* f : facades) delete f; for (auto* c : caches) delete c;
+}
+
+void processor_system_dot_product_shared() {
+    std::cout << "==== Dot Product (SharedMemoryInstance) ====\n";
+    ProcessorSystem system;
+    SharedMemoryInstance mem(512); // suficiente para direccionar hasta 280
+
+    // Inicializar vectores A (base 0) y B (base 128) con 16 doubles
+    for (int i = 0; i < 16; ++i) {
+        double aVal = static_cast<double>(i + 1);
+        double bVal = static_cast<double>(2 * (i + 1));
+        uint64_t aBits; std::memcpy(&aBits, &aVal, 8);
+        uint64_t bBits; std::memcpy(&bBits, &bVal, 8);
+        mem.store(i * 8, aBits);            // A[i]
+        mem.store(128 + i * 8, bBits);      // B[i]
+    }
+    // Inicializar acumuladores parciales (direcciones 256,264,272,280)
+    for (int pe = 0; pe < 4; ++pe) mem.store(256 + pe * 8, 0);
+
+    // Cargar programas
+    std::vector<Instruction> p0 = loadProgramFile("pe0.pec");
+    std::vector<Instruction> p1 = loadProgramFile("pe1.pec");
+    std::vector<Instruction> p2 = loadProgramFile("pe2.pec");
+    std::vector<Instruction> p3 = loadProgramFile("pe3.pec");
+
+    // Adjuntar memoria
+    for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).attachMemory(&mem);
+    system.loadProgram(0, p0); system.loadProgram(1, p1); system.loadProgram(2, p2); system.loadProgram(3, p3);
+
+    // Ejecutar
+    for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).start(nullptr);
+    system.joinAll();
+
+    // Leer parciales
+    double partials[4];
+    for (int pe = 0; pe < 4; ++pe) {
+        uint64_t raw = mem.load(256 + pe * 8);
+        std::memcpy(&partials[pe], &raw, 8);
+    }
+    double finalDot = partials[0] + partials[1] + partials[2] + partials[3];
+
+    std::cout << "Parciales (SharedMemory): ";
+    for (double p : partials) std::cout << p << " ";
+    std::cout << "\nDot final = " << finalDot << "\n";
+}
+
 int main(int argc, char* argv[]) {
+    processor_system_dot_product_shared();
+    std::cout << "\n";
+    processor_system_dot_product();
     test_interconnect_full_mesi();
     // std::cout << "\n\n";
     // test_memory();

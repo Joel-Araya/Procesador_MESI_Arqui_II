@@ -1,5 +1,18 @@
-; PE1: Lee valor en addr 8, incrementa una vez y guarda en addr 8
-LOAD R0, 8
-INC R0
-STORE R0, 8
+; PE1 looped dot partial
+MOVI R4, 32       ; base A offset (4*8)
+MOVI R5, 160      ; base B offset
+MOVI R6, 8
+MOVI R7, 4
+MOVI R0, 0
+LOOP1:
+LOADR R1, R4
+LOADR R2, R5
+FMUL R3, R1, R2
+FADD R0, R0, R3
+ADDI R4, 8
+ADDI R5, 8
+DEC R7
+JNZ LOOP1
+MOVI R1, 264      ; resultado parcial PE1
+STORER R0, R1
 HALT
