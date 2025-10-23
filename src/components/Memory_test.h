@@ -1,14 +1,14 @@
-#ifndef MEMORY_H
-#define MEMORY_H
+#ifndef MEMORY_TEST_H
+#define MEMORY_TEST_H
 
 #include <cstdint>
 #include <chrono>
 #include <thread>
 #include <iostream>
 
-class Memory {
+class Memory_test {
 public:
-    Memory() { /* Constructor stub */ }
+    Memory_test() { /* Constructor stub */ }
     
     // Método que el Bus Interconnect llama para obtener datos
     void read_block(uint64_t address) {
@@ -20,4 +20,4 @@ public:
     // Aquí irían otros métodos: write_block, etc.
 };
 
-#endif // MEMORY_H
+#endif // MEMORY_TEST_H

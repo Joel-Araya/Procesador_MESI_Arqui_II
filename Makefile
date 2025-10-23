@@ -2,13 +2,14 @@
 # VARIABLES GLOBALES
 # ==============================================================================
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -g -pthread
+CXXFLAGS = -std=c++17 -Wall -g -Wextra -pthread
 
 # Directorios de código fuente
 SRCDIR = src
 COMPONENTS = $(SRCDIR)/components
 INTERCONNECT = $(SRCDIR)/interconnect
 UTILS = $(SRCDIR)/utils
+PE = $(SRCDIR)/PE
 
 # Archivo ejecutable final
 TARGET = sim_mesi
@@ -22,8 +23,9 @@ TARGET = sim_mesi
 SRCS = $(SRCDIR)/main.cpp \
        $(INTERCONNECT)/BusInterconnect.cpp \
        $(COMPONENTS)/cacheL1.cpp \
-       $(COMPONENTS)/memory.cpp
-
+       $(COMPONENTS)/memory.cpp \
+	   $(wildcard $(PE)/*.cpp)
+	   
 
 # Mapea src/dir/file.cpp a obj/dir/file.o
 OBJS = $(patsubst $(SRCDIR)/%.cpp, obj/%.o, $(SRCS))
@@ -43,7 +45,7 @@ $(TARGET): obj $(OBJS)
 
 # 2. Regla para crear el directorio de objetos (asegura que obj/components exista)
 obj:
-	@mkdir -p obj/components obj/interconnect obj/utils
+	@mkdir -p obj/components obj/interconnect obj/utils obj/PE
 
 # 3. Regla general para compilar archivos .cpp a .o (Pattern Rule)
 # Compila cualquier archivo .cpp en el directorio fuente o subdirectorios

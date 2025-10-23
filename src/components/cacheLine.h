@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "../interconnect/BusEnunms.h"
+#include "../interconnect/BusEnums.h"
 #include <array>
 
 struct CacheLine {

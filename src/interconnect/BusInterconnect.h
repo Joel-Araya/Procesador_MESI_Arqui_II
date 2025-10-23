@@ -7,8 +7,8 @@
 #include <memory>
 #include "BusTransaction.h"
 #include "../utils/ConcurrentQueue.h"
-#include "../components/Memory_test.h"
-#include "../components/CacheL1_test.h"
+#include "../components/memory.h"
+#include "../components/cacheL1.h"
 
 class BusInterconnect {
 public:
