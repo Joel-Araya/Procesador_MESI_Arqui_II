@@ -19,6 +19,8 @@ public:
     // Funcion que se ejecuta en el hilo del Bus
     void run();
 
+    void stop();
+
     // Interfaz para que una CacheL1 envie una peticion al Bus
     void add_request(const BusTransaction& transaction);
 
@@ -37,6 +39,8 @@ private:
     // Punteros a los otros modulos para invocar Snooping y accesos a Memoria
     std::vector<CacheL1*>& caches_;
     Memory* memory_;
+
+    std::atomic<bool> running_;
 
     // Logica de Arbitraje y Proceso MESI
     void arbitrate_and_process();
