@@ -116,6 +116,7 @@ CacheL1::BusSnoopResult CacheL1::snoop_bus_rd(uint64_t address) {
     uint64_t index = get_index(address);
     uint64_t tag = get_tag(address);
     CacheLine* line = find_line(index, tag);
+    
     if (!line) return res;
 
     if (line->state == MESI_State::MODIFIED) {
@@ -126,13 +127,12 @@ CacheL1::BusSnoopResult CacheL1::snoop_bus_rd(uint64_t address) {
         line->state = MESI_State::SHARED;
         // la línea sigue válida; dirty se limpia una vez que el bus/mem haga writeback
         line->dirty = false;
-    } else if (line->state == MESI_State::EXCLUSIVE) {
+    } else if (line->state == MESI_State::EXCLUSIVE || line->state == MESI_State::SHARED) {
         res.had_shared = true;
-        line->state = MESI_State::SHARED;
-    } else if (line->state == MESI_State::SHARED) {
-        res.had_shared = true;
-        // permanece SHARED
-    }
+        if (line->state == MESI_State::EXCLUSIVE) {
+            line->state = MESI_State::SHARED;
+        }
+    } 
     return res;
 }
 

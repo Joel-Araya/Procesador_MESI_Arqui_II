@@ -1,6 +1,7 @@
 #include "BusInterconnect.h"
 #include <iostream>
 #include <functional>
+#include <cstring>
 
 
 BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
@@ -11,19 +12,20 @@ BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
     std::cout << "BusInterconnect: Inicializando Interconector con " 
     << caches_.size() << " caches.\n";
     
-    // Inicializar el contador de arbitraje para empezar por PE_0
     last_granted_pe_ = 3; 
-    std::cout << "🔄 Lógica de Arbitraje: Iniciando Round-Robin. El próximo PE a buscar es PE " 
+    std::cout << "Lógica de Arbitraje: Iniciando Round-Robin. El próximo PE a buscar es PE " 
     << (last_granted_pe_ + 1) % 4 << ".\n"; 
 
-    // Inicializa el hilo del bus
     bus_thread_ = std::thread(&BusInterconnect::run, this);
-
     std::cout << "Hilo de Arbitraje del Bus inicializado.\n";
 }
 
 BusInterconnect::~BusInterconnect(){
-    stop();
+    stop_flag_ = true;
+    if (bus_thread_.joinable()) {
+        bus_thread_.join();
+    }
+
     std::cout << "BusInterconnect: Hilo de Arbitraje finalizado.\n";
 }
 
@@ -33,13 +35,11 @@ void BusInterconnect::stop(){
 }
 
 void BusInterconnect::add_request(const BusTransaction& transaction) {
-    // La CacheL1 llama a esta funcion, la peticion se añade a la cola concurrente
     request_queue_.push(transaction);
 }
 
-void BusInterconnect::run()
-{
-    while(running_.load()) {
+void BusInterconnect::run() {
+    while(!stop_flag_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         if (!request_queue_.empty()) {
             std::cout << "\n[BUS] Peticiones en cola. Iniciando ciclo de Arbitraje...\n";
@@ -49,9 +49,6 @@ void BusInterconnect::run()
 }
 
 void BusInterconnect::arbitrate_and_process() {
-    // Implementacion simple de Round-Robin
-
-    // Encontrar la proxima peticion con prioridad Round-Robin
     int next_pe_id = (last_granted_pe_ + 1) % 4;
 
     BusTransaction active_transaction = request_queue_.pop_priority(last_granted_pe_);
@@ -59,65 +56,76 @@ void BusInterconnect::arbitrate_and_process() {
     std::cout << "[BUS ARBITRADO] PE " << active_transaction.pe_id 
     << " ha ganado el acceso (Prioridad iniciada en PE " << next_pe_id << ").\n";
 
-    // Actualizar el PE que acaba de ser atendido
     last_granted_pe_ = active_transaction.pe_id;
-    std::cout << "   -> Bus bloqueado. Próxima búsqueda Round-Robin iniciará en PE " 
+    std::cout << "\t-> Bus bloqueado. Próxima búsqueda Round-Robin iniciará en PE " 
     << (last_granted_pe_ + 1) % 4 << ".\n";
 
-    // Procesar la transaccion MESI
     process_transaction(active_transaction);
-
-    // FALTA IMPLEMENTAR - Enviar la respuesta a la Cache solicitante
 }
 
 void BusInterconnect::process_transaction(BusTransaction& transaction) {
-    // Difundir la transaccion (Snooping)
-    std::cout << "📣 [BUS DIFUSIÓN] Difundiendo " 
+    std::array<uint8_t, CacheL1::BLOCK_BYTES> data_block;
+    int data_provider_pe = -1;
+
+    std::cout << "[BUS DIFUSIÓN] Difundiendo " 
     << get_command_name(transaction.command) << " @ 0x" 
     << std::hex << transaction.address << std::dec 
     << " (Solicitado por PE " << transaction.pe_id << ").\n";
 
-    // El Bus llama a una funcion de "snoop" en cada una de las 4 caches
-    // Solo las caches observadoras (pe_id != transaction.pe_id) responden con su estado
     for (int i = 0; i < 4; ++i) {
-        // Este metodo debe estar definido en la clase CacheL1
-        auto snoop_result = caches_[i]->snoop_bus_rd(transaction.address);
+        if (i == transaction.pe_id) continue;
 
-        // Analizar el resultado:
+        CacheL1::BusSnoopResult snoop_result;
+
+        if (transaction.command == BusCommand::BUS_READ) {
+            snoop_result = caches_[i]->snoop_bus_rd(transaction.address);
+        } else if (transaction.command == BusCommand::BUS_READ_X) {
+            snoop_result = caches_[i]->snoop_bus_rdx(transaction.address);
+        }
+
         if (snoop_result.had_modified) {
-            std::cout << "   <- Snooping: PE " << i << " tenía el dato en estado MODIFIED (M). REQUIERE WRITE-BACK.\n";
-            transaction.hit_modified = true;
-        } else if (snoop_result.had_shared) {
-            std::cout << "   <- Snooping: PE " << i << " tenía el dato en estado SHARED (S).\n";
-            transaction.hit_shared = true;
-        } else {
-            // Solo si el comando es BusRdX, las cachés con S o E cambian a I.
-            if (transaction.command == BusCommand::BUS_READ_X) {
-                std::cout << "   <- Snooping: PE " << i << " INVALDADO remotamente.\n";
+            std::cout << "\t<- Snooping: PE " << i << " tenía el dato en estado MODIFIED (M). REQUIERE WRITE-BACK.\n";
+            if (!transaction.hit_modified) {
+                transaction.hit_modified = true;
+                data_provider_pe = i;
+                std::memcpy(data_block.data(), snoop_result.data.data(), CacheL1::BLOCK_BYTES);
             }
+        }
+        
+        if (snoop_result.had_shared) {
+            transaction.hit_shared = true;
+            std::cout << "\t<- Snooping: PE " << i << " tenía el dato en estado SHARED/EXCLUSIVE (S/E).\n";
         }
     }
 
-    // Determinar la fuente de datos y el trafico
     if (transaction.hit_modified) {
-        // Dato viene de otra Cache (MESI: Write-Back requerido)
-        // Actualizar metricas de trafico
-        // La cache que tenia M proveera los datos directamente o escribira a memoria 
-        // (Esto requiere coordinar con el rol de Memoria y Cache)
-        std::cout << "💾 [RESOLUCIÓN] Datos obtenidos de otra Caché. Memoria no accedida.\n";
-        // Lógica de esperar el Write-Back a memoria
+        std::cout << "[RESOLUCIÓN] Datos obtenidos de Caché PE " << data_provider_pe << ".\n";
+        
+        memory_->write_block(transaction.address, data_block.data());
+        std::cout << "[MEM] Write-back completado a Memoria.\n";
     } else {
-        // Dato viene de Memoria
-        std::cout << "💾 [RESOLUCIÓN] Accediendo a Memoria Principal.\n";
+        std::cout << "[RESOLUCIÓN] Accediendo a Memoria Principal.\n";
+
+        memory_->read_block(transaction.address, data_block.data());
         transaction.data_from_memory = true;
-        // Llamar al modulo de memoria para obtener datos
-        // memory_->read_block(transaction.address);
     }
 
-    std::cout << "--------------------------------------------------------\n";
+    bool others_have = transaction.hit_shared || transaction.hit_modified;
 
-    // FALTA IMPLEMENTAR - El bus debe enviar la respuesta final (datos y nuevo estado) 
-    // de vuelta a la cache solicitante (transaction.pe_id)
+    if (transaction.command == BusCommand::BUS_READ_X) {
+        others_have = false;
+        std::cout << "\t-> Escritura (BusRdX): Garantizando estado EXCLUSIVE para PE " << transaction.pe_id << ".\n";
+    } else {
+        std::cout << "\t-> Lectura (BusRd): Estado final es " << (others_have ? "SHARED" : "EXCLUSIVE") << ".\n";
+    }
+
+    caches_[transaction.pe_id]->load_block_from_bus(
+        transaction.address, 
+        data_block.data(), 
+        others_have
+    );
+
+    std::cout << "--------------------------------------------------------\n";
 }
 
 std::string BusInterconnect::get_command_name(BusCommand cmd) const {

@@ -22,14 +22,14 @@ public:
     // Interfaz para que una CacheL1 envie una peticion al Bus
     void add_request(const BusTransaction& transaction);
 
-    // Detener hilo y unir
-    void stop();
+    // Funcion auxiliar para obtener el nombre del comando para prints
+    std::string get_command_name(BusCommand cmd) const;
 
 private:
     std::thread bus_thread_;
     std::mutex arbit_mutex_;
     int last_granted_pe_ = -1;
-    std::atomic<bool> running_{true};
+    std::atomic<bool> stop_flag_ = false;
 
     // Cola de peticiones del Bus
     ConcurrentQueue<BusTransaction> request_queue_;
@@ -42,8 +42,6 @@ private:
     void arbitrate_and_process();
     void process_transaction(BusTransaction& transaction);
 
-    // Funcion auxiliar para obtener el nombre del comando para prints
-    std::string get_command_name(BusCommand cmd) const;
 };
 
 #endif // BUS_INTERCONNECT_H
