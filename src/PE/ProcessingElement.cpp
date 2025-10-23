@@ -114,6 +114,33 @@ void ProcessingElement::start(ThreadFunc func) {
                     case OpCode::HALT: {
                         m_running = false; break;
                     }
+                    case OpCode::MOVI: {
+                        writeReg(inst.rd, inst.addr); // immediate in addr field
+                        m_pc++; break;
+                    }
+                    case OpCode::ADDI: {
+                        uint64_t cur = readReg(inst.rd);
+                        writeReg(inst.rd, cur + inst.addr);
+                        m_pc++; break;
+                    }
+                    case OpCode::ADD: {
+                        uint64_t a = readReg(inst.ra);
+                        uint64_t b = readReg(inst.rb);
+                        writeReg(inst.rd, a + b);
+                        m_pc++; break;
+                    }
+                    case OpCode::LOADR: {
+                        uint64_t effective = readReg(inst.ra);
+                        uint64_t val = m_mem ? m_mem->load(effective) : 0;
+                        writeReg(inst.rd, val);
+                        m_pc++; break;
+                    }
+                    case OpCode::STORER: {
+                        uint64_t effective = readReg(inst.ra);
+                        uint64_t val = readReg(inst.rd);
+                        if (m_mem) m_mem->store(effective, val);
+                        m_pc++; break;
+                    }
                 }
             }
             m_running = false;

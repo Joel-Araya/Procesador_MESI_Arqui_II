@@ -5,7 +5,8 @@
 
 BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
     : caches_(caches),
-    memory_(memory)
+    memory_(memory),
+    running_(true)
 {
     std::cout << "BusInterconnect: Inicializando Interconector con " 
     << caches_.size() << " caches.\n";
@@ -22,13 +23,13 @@ BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
 }
 
 BusInterconnect::~BusInterconnect(){
-    if (bus_thread_.joinable()) {
-        // En un entorno de prueba es mejor no llamar join sin un mecanismo de stop para evitar deadlock
-        // Aqui se asume que la prueba termina rapido
-        // bus_thread_.join();
-    }
-
+    stop();
     std::cout << "BusInterconnect: Hilo de Arbitraje finalizado.\n";
+}
+
+void BusInterconnect::stop(){
+    running_.store(false);
+    if (bus_thread_.joinable()) bus_thread_.join();
 }
 
 void BusInterconnect::add_request(const BusTransaction& transaction) {
@@ -38,11 +39,8 @@ void BusInterconnect::add_request(const BusTransaction& transaction) {
 
 void BusInterconnect::run()
 {
-    // El hilo del Bus se ejecuta continuamente 
-    while(true) {
-        // Logica para pausar el bus si no hay peticiones 
+    while(running_.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
         if (!request_queue_.empty()) {
             std::cout << "\n[BUS] Peticiones en cola. Iniciando ciclo de Arbitraje...\n";
             arbitrate_and_process();

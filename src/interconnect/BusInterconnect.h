@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <memory>
+#include <atomic>
 #include "BusTransaction.h"
 #include "../utils/ConcurrentQueue.h"
 #include "../components/memory.h"
@@ -21,10 +22,14 @@ public:
     // Interfaz para que una CacheL1 envie una peticion al Bus
     void add_request(const BusTransaction& transaction);
 
+    // Detener hilo y unir
+    void stop();
+
 private:
     std::thread bus_thread_;
     std::mutex arbit_mutex_;
     int last_granted_pe_ = -1;
+    std::atomic<bool> running_{true};
 
     // Cola de peticiones del Bus
     ConcurrentQueue<BusTransaction> request_queue_;

@@ -12,14 +12,16 @@ public:
     ~MemoryFacade() = default;
 
     uint64_t load(uint64_t addr) override{
-        uint64_t temp_;
-        cache_->read(addr, reinterpret_cast<uint8_t*>(&temp_)); // TODO: reinterpret cast must be eliminated
+        // Primero solicitar en bus (intención de lectura)
         bus_->add_request(BusTransaction(pe_id_, BusCommand::BUS_READ, addr));
+        uint64_t temp_ = 0;
+        cache_->read(addr, reinterpret_cast<uint8_t*>(&temp_));
         return temp_;
     }
     void store(uint64_t addr, uint64_t val) override {
-        cache_->write(addr, reinterpret_cast<const uint8_t*>(&val)); // TODO: reinterpret cast must be eliminated
-        bus_->add_request(BusTransaction(pe_id_, BusCommand::BUS_WRITE, addr));
+        // Solicitar intención de escritura
+        bus_->add_request(BusTransaction(pe_id_, BusCommand::BUS_READ_X, addr));
+        cache_->write(addr, reinterpret_cast<const uint8_t*>(&val));
     }
 
 private:
