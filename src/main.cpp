@@ -23,83 +23,131 @@
 #include "PE/SharedMemoryInstance.hpp"
 
 
-// Funcion de prueba del comportamiento de un PE/Cache
-void pe_thread_function(int pe_id, BusInterconnect& bus, int num_requests) {
-    std::cout << "[PE " << pe_id << "] Iniciando simulador de actividad.\n";
-    
-    // Simulación de peticiones (e.g., Cache Misses)
-    for (int i = 0; i < num_requests; ++i) {
-        // Genera una dirección y un comando de bus (simulando un LOAD que falló)
-        uint64_t address = 0x100 * pe_id + 0x8 * i;
-        BusCommand cmd = (i % 2 == 0) ? BusCommand::BUS_READ : BusCommand::BUS_READ_X;
-
-        BusTransaction transaction(pe_id, cmd, address);
-        
-        std::cout << "[PE " << pe_id << "] Generando petición: " 
-                  << (cmd == BusCommand::BUS_READ ? "BUS_READ" : "BUS_READ_X")
-                  << " @ 0x" << std::hex << address << std::dec << "\n";
-        
-        bus.add_request(transaction);
-        
-        // Pausa aleatoria para simular latencia de ejecución entre peticiones
-        std::this_thread::sleep_for(std::chrono::milliseconds(50 + (pe_id * 10)));
+std::string get_mesi_state_name(MESI_State state) {
+    switch (state) {
+        case MESI_State::MODIFIED: return "MODIFIED (M)";
+        case MESI_State::EXCLUSIVE: return "EXCLUSIVE (E)";
+        case MESI_State::SHARED: return "SHARED (S)";
+        case MESI_State::INVALID: return "INVALID (I)";
+        default: return "UNKNOWN";
     }
-    std::cout << "[PE " << pe_id << "] Actividad finalizada.\n";
 }
 
-// Funcion principal de prueba
-void test_interconnect_concurrency() {
+// Funcion de prueba del comportamiento de un PE/Cache
+void pe_activity(int pe_id, BusInterconnect& bus, uint64_t address_base, int num_reads, int num_writes) {
+    std::cout << "--> [PE " << pe_id << "] Iniciando actividad: " << num_reads << " lecturas, " << num_writes << " escrituras.\n";
+    
+    // 1. Lecturas (BusRd)
+    for (int i = 0; i < num_reads; ++i) {
+        uint64_t address = address_base + (i * 8); 
+        BusTransaction transaction(pe_id, BusCommand::BUS_READ, address);
+        
+        std::cout << "[PE " << pe_id << "] REQ: BusRd @ 0x" << std::hex << address << std::dec << "\n";
+        bus.add_request(transaction);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50 + (pe_id * 5))); // Pausa para simular latencia
+    }
+
+    // 2. Escrituras (BusRdX)
+    for (int i = 0; i < num_writes; ++i) {
+        uint64_t address = address_base + 0x400 + (i * 8); // Offset para direcciones diferentes
+        BusTransaction transaction(pe_id, BusCommand::BUS_READ_X, address);
+        
+        std::cout << "[PE " << pe_id << "] REQ: BusRdX @ 0x" << std::hex << address << std::dec << "\n";
+        bus.add_request(transaction);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100 + (pe_id * 10))); // Pausa para simular latencia
+    }
+    
+    std::cout << "<-- [PE " << pe_id << "] Actividad finalizada.\n";
+}
+
+void test_interconnect_full_mesi() {
     std::cout << "\n======================================================\n";
-    std::cout << "  PRUEBA DE CONCURRENCIA Y ARBITRAJE DEL INTERCONNECT\n";
+    std::cout << "  PRUEBA MESI COMPLETA Y ARBITRAJE DEL INTERCONNECT\n";
     std::cout << "======================================================\n\n";
 
-    // 1. Inicializar componentes Dummy
+    // 1. Inicializar Componentes (Memoria y 4 Cachés)
     Memory memory;
     std::vector<CacheL1*> caches;
     for (int i = 0; i < 4; ++i) {
+        // Inicializar cada Cache L1 con su ID y puntero a la Memoria
         caches.push_back(new CacheL1(i, &memory));
     }
 
     // 2. Inicializar el Bus Interconnect
     BusInterconnect bus(caches, &memory);
-
-    // 3. Crear los hilos (Simulando 4 PEs/Cachés)
+    
+    // 3. Crear hilos de PEs y asignar cargas
     std::vector<std::thread> pe_threads;
-    int requests_per_pe = 10; 
-    
-    // Iniciar el hilo del Bus primero
-    std::thread bus_thread(&BusInterconnect::run, &bus);
-    
-    // Iniciar los hilos de los PEs
-    for (int i = 0; i < 4; ++i) {
-        pe_threads.emplace_back(pe_thread_function, i, std::ref(bus), requests_per_pe);
-    }
 
+    // SCENARIO 1: Lecturas Compartidas y Round-Robin
+    // PE 0 y PE 2 piden el mismo bloque (0x1000) -> Ambos deben terminar en estado S.
+    // PE 1 y PE 3 piden bloques distintos.
+    pe_threads.emplace_back(pe_activity, 0, std::ref(bus), 0x100, 2, 0); 
+    pe_threads.emplace_back(pe_activity, 1, std::ref(bus), 0x200, 1, 0); 
+    pe_threads.emplace_back(pe_activity, 2, std::ref(bus), 0x100, 1, 0); 
+    pe_threads.emplace_back(pe_activity, 3, std::ref(bus), 0x300, 1, 0); 
+    
+    // SCENARIO 2: Conflicto de Escritura (Write-Miss)
+    // Todos los PEs piden exclusividad sobre direcciones cercanas
+    pe_threads.emplace_back(pe_activity, 0, std::ref(bus), 0x400, 0, 1);
+    pe_threads.emplace_back(pe_activity, 1, std::ref(bus), 0x400, 0, 1);
+    
     // 4. Esperar a que los PEs terminen de generar peticiones
     for (auto& t : pe_threads) {
         t.join();
     }
     
-    std::cout << "\nTodos los PEs han terminado de generar peticiones.\n";
+    std::cout << "\n[MAIN] Todos los PEs han terminado de generar peticiones. Esperando Arbitraje final...\n";
     
-    // 5. Dejar que el Bus procese las peticiones restantes
-    std::this_thread::sleep_for(std::chrono::seconds(2)); 
+    // 5. Dejar que el Bus procese las peticiones restantes (da tiempo para que el Bus vacíe la cola)
+    std::this_thread::sleep_for(std::chrono::seconds(3)); 
     
-    // NOTA: En la implementación final, el Bus debe tener un mecanismo de 'stop'
-    // (Ej: una variable booleana 'running' que se pone en false).
-    std::cout << "El Bus ha tenido 2 segundos para procesar.\n";
+    // 6. Verificación Final de Estados MESI (Debug)
+    std::cout << "\n======================================================\n";
+    std::cout << "  VERIFICACIÓN FINAL DE ESTADOS DE CACHÉ\n";
+    std::cout << "======================================================\n";
+    
+    // --- Bloque 0x100 (Lecturas compartidas) ---
+    // EXPECTED: PE 0 (S), PE 2 (S), PE 1 (I), PE 3 (I)
+    std::cout << "Estado de 0x100:\n";
+    for (int i = 0; i < 4; ++i) {
+        MESI_State state = caches[i]->get_line_state(0x100); // Se usa la dirección base
+        
+        bool expected_shared = (i == 0 || i == 2); 
+        // PE 0 y PE 2 realizaron BusRd de un bloque compartido, deben terminar en S
+        MESI_State expected_state = expected_shared ? MESI_State::SHARED : MESI_State::INVALID;
 
-    // 6. Limpieza
-    // Aquí deberías detener el hilo del bus de forma segura y liberar memoria
-    // Para esta prueba simple, solo liberamos las cachés
-    // for (auto* c : caches) {
-    //     delete c;
-    // }
+        bool success = (state == expected_state);
+
+        std::cout << " - PE " << i << ": " << get_mesi_state_name(state) 
+                  << " (" << (success ? "OK" : "FALLÓ") << ". Esperado: " 
+                  << get_mesi_state_name(expected_state) << ")\n";
+    }
+
+    // --- Bloque 0x800 (Escritura exclusiva final) ---
+    // EXPECTED: PE 1 (E/M), PE 0, 2, 3 (I)
+    std::cout << "\nEstado de 0x800:\n";
+    for (int i = 0; i < 4; ++i) {
+        MESI_State state = caches[i]->get_line_state(0x800); // Se usa la dirección base
+        
+        // El último en escribir fue PE 1 (BusRdX @ 0x800)
+        MESI_State expected_state = (i == 1) ? MESI_State::EXCLUSIVE : MESI_State::INVALID; 
+        
+        bool success = (state == expected_state || (i==1 && state == MESI_State::MODIFIED));
+        
+        std::cout << " - PE " << i << ": " << get_mesi_state_name(state) 
+                  << " (" << (success ? "OK" : "FALLÓ") << ". Esperado: " 
+                  << get_mesi_state_name(expected_state) << ")\n";
+    }
+
+    // 7. Limpieza
+    for (auto* c : caches) {
+        delete c;
+    }
     
-    //bus_thread.join(); //  <-- Esto causará un bloqueo si no se implementa el 'stop'
-    // en la función run() del Bus.
+    // El destructor del Bus se llama automáticamente, pero la unión del hilo debe ser gestionada
+    // correctamente en el código final para evitar bloqueos.
 }
-
 
 void test_memory(){
     Memory mem;
@@ -275,12 +323,12 @@ void processor_system(){
 }
 
 int main(int argc, char* argv[]) {
-    // test_interconnect_concurrency();
-    //std::cout << "\n\n";
-    //test_memory();
-    //std::cout << "\n\n";
+    test_interconnect_full_mesi();
+    // std::cout << "\n\n";
+    // test_memory();
+    // std::cout << "\n\n";
     // processor_system();
-    //std::cout << "\n\n";
-    processor_system_with_memory_facade();
+    // std::cout << "\n\n";
+    // processor_system_with_memory_facade();
     return 0;
 }

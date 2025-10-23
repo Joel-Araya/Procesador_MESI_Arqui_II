@@ -12,3 +12,4 @@ obj/components/memory.o
 obj/interconnect/BusInterconnect.o
 obj/main.o
 sim_mesi
+tests/
