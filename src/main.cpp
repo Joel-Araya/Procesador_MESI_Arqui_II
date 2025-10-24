@@ -375,6 +375,12 @@ void processor_system_dot_product(bool debug = false) {
         c->print_cache_lines();
     }
 
+    for (auto* f: facades) {
+        // Suponiendo que MemoryFacade tiene un método para imprimir contadores
+        std::cout << "[MemoryFacade PE " << f->getPEId() << "] Load count: " << f->getLoadCount()
+                  << ", Store count: " << f->getStoreCount() << "\n";
+    }
+
     for (size_t j = 0; j < 4; ++j) {
         memory.read_word(j * 32 + 1024, &data);
         double a; std::memcpy(&a, &data, sizeof(uint64_t));
