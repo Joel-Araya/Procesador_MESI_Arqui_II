@@ -14,6 +14,6 @@ ADDI R4, 32        ; avanzar A
 ADDI R5, 32        ; avanzar B
 DEC R7
 JNZ LOOP0
-MOVI R1, 1056      ; direccion resultado parcial PE0
+MOVI R1, 1024      ; direccion resultado parcial PE0
 STORER R0, R1
 HALT

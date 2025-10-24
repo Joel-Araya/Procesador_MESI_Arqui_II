@@ -33,7 +33,7 @@ void CacheL1::writeback_if_dirty(CacheLine* line, uint64_t index) {
 
         std::cout << "[WRITEBACK] Cache" << id_
                   << " writing back dirty block @ 0x"
-                  << std::hex << block_addr << std::dec << "\n";
+                  << std::hex << block_addr << std::dec << " (32B)\n";
 
         memory_->write_block(block_addr, reinterpret_cast<const uint64_t *>(line->data.data()));
         line->dirty = false;

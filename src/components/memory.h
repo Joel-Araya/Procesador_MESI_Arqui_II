@@ -14,11 +14,15 @@ public:
 
     Memory();
 
-    // Lee un bloque de 32 bytes alineado en 'address' (address puede ser cualquier byte; se alinea internamente)
+    // Lee un bloque completo (32 bytes) alineado en 'address'
     void read_block(uint64_t address, uint64_t* out_block) const;
 
-    // Escribe un bloque de 32 bytes alineado en 'address' (address puede ser cualquier byte; se alinea internamente)
+    // Escribe un bloque completo (32 bytes) alineado en 'address'
     void write_block(uint64_t address, const uint64_t* in_block);
+
+    // Operaciones de palabra (8 bytes) para evitar usar buffers pequeños como bloques
+    void read_word(uint64_t address, uint64_t* out_word) const;
+    void write_word(uint64_t address, const uint64_t* in_word);
 
     // Lectura directa de bytes (para pruebas)
     void read_bytes(uint64_t address, uint64_t* out_buf, size_t n) const;

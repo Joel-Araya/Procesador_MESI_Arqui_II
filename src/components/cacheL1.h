@@ -44,7 +44,7 @@ public:
 
     void print_metrics() const;
 
-    static constexpr int BLOCK_BYTES = 8;
+    static constexpr int BLOCK_BYTES = 32; // línea completa de 32 bytes
 
 private:
     int id_;

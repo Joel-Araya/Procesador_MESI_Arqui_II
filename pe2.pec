@@ -13,6 +13,6 @@ ADDI R4, 32
 ADDI R5, 32
 DEC R7
 JNZ LOOP2
-MOVI R1, 1120      ; resultado parcial PE2
+MOVI R1, 1088      ; resultado parcial PE2
 STORER R0, R1
 HALT

@@ -69,7 +69,7 @@ void BusInterconnect::arbitrate_and_process() {
 }
 
 void BusInterconnect::process_transaction(BusTransaction& transaction) {
-    std::array<uint8_t, CacheL1::BLOCK_BYTES> data_block;
+    std::array<uint8_t, CacheL1::BLOCK_BYTES> data_block; // ahora 32B
     int data_provider_pe = -1;
 
     std::cout << "[BUS DIFUSIÓN] Difundiendo " 
@@ -107,7 +107,7 @@ void BusInterconnect::process_transaction(BusTransaction& transaction) {
         std::cout << "[RESOLUCIÓN] Datos obtenidos de Caché PE " << data_provider_pe << ".\n";
         
         memory_->write_block(transaction.address, reinterpret_cast<const uint64_t *>(data_block.data()));
-        std::cout << "[MEM] Write-back completado a Memoria.\n";
+        std::cout << "[MEM] Write-back completado a Memoria (32B).\n";
     } else {
         std::cout << "[RESOLUCIÓN] Accediendo a Memoria Principal.\n";
 

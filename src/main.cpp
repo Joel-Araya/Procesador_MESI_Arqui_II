@@ -366,7 +366,7 @@ void processor_system_dot_product() {
     system.joinAll();
     bus.stop();
 
-    for (size_t j = 0; j < 4; ++j) {
+    for (size_t j = 0; j < 8; ++j) {
         memory.read_block(j * 32 + 1024, &data);
         double a; std::memcpy(&a, &data, sizeof(uint64_t));
         std::cout << "Partials[" << j * 32 + 1024 << "] = " << a << "\n";
@@ -429,7 +429,7 @@ int main(int argc, char* argv[]) {
     //processor_system_dot_product();
     //test_interconnect_full_mesi();
     // std::cout << "\n\n";
-    test_memory();
+    // test_memory();
     // std::cout << "\n\n";
     // processor_system();
     // std::cout << "\n\n";
