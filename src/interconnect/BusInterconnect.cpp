@@ -101,12 +101,12 @@ void BusInterconnect::process_transaction(BusTransaction& transaction) {
     if (transaction.hit_modified) {
         std::cout << "[RESOLUCIÓN] Datos obtenidos de Caché PE " << data_provider_pe << ".\n";
         
-        memory_->write_block(transaction.address, data_block.data());
+        memory_->write_block(transaction.address, reinterpret_cast<const uint64_t *>(data_block.data()));
         std::cout << "[MEM] Write-back completado a Memoria.\n";
     } else {
         std::cout << "[RESOLUCIÓN] Accediendo a Memoria Principal.\n";
 
-        memory_->read_block(transaction.address, data_block.data());
+        memory_->read_block(transaction.address, reinterpret_cast<uint64_t *>(data_block.data()));
         transaction.data_from_memory = true;
     }
 

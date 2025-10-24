@@ -30,11 +30,16 @@ void CacheL1::writeback_if_dirty(CacheLine* line, uint64_t index) {
     if (line->valid && line->dirty) {
         uint64_t block_number = line->tag * SETS + index;
         uint64_t block_addr = block_number * BLOCK_BYTES;
-        memory_->write_block(block_addr, line->data.data());
+
+        std::cout << "[WRITEBACK] Cache" << id_
+                  << " writing back dirty block @ 0x"
+                  << std::hex << block_addr << std::dec << "\n";
+
+        memory_->write_block(block_addr, reinterpret_cast<const uint64_t *>(line->data.data()));
         line->dirty = false;
-        // tras writeback, la línea puede ser reutilizada
     }
 }
+
 
 /* ------------------ Operaciones CPU-facing ------------------ */
 
@@ -54,7 +59,7 @@ void CacheL1::write(uint64_t address, const uint8_t* data8) {
 
         // Cargar bloque nuevo desde memoria
         uint64_t block_addr = ((tag * SETS) + index) * BLOCK_BYTES;
-        memory_->read_block(block_addr, victim->data.data());
+        memory_->read_block(block_addr, reinterpret_cast<uint64_t *>(victim->data.data()));
 
         // Inicializar metadata
         victim->valid = true;
@@ -88,7 +93,7 @@ void CacheL1::read(uint64_t address, uint8_t* out8) {
         writeback_if_dirty(victim, index);
 
         uint64_t block_addr = ((tag * SETS) + index) * BLOCK_BYTES;
-        memory_->read_block(block_addr, victim->data.data());
+        memory_->read_block(block_addr, reinterpret_cast<uint64_t *>(victim->data.data()));
 
         victim->valid = true;
         victim->dirty = false;

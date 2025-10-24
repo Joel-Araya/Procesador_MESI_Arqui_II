@@ -4,10 +4,6 @@
 #include <chrono>
 #include <cstring>
 
-// Incluye archivos de Components
-#include "components/CacheL1_test.h"
-#include "components/Memory_test.h"
-
 // Incluye archivos de Interconnect
 #include "interconnect/BusEnums.h"
 #include "interconnect/BusTransaction.h"
@@ -174,7 +170,7 @@ void test_memory(){
         block = r0.data;
         // (en una implementación completa, el bus sería responsable de escribir a memoria)
     } else {
-        mem.read_block(addr, block.data());
+        mem.read_block(addr, reinterpret_cast<uint64_t *>(block.data()));
     }
 
     // Ahora bus entrega el bloque a cache1 (others_have = true porque cache0 tenía la línea)
@@ -197,7 +193,7 @@ void test_memory(){
     std::array<uint8_t,32> block_for_requester;
     if (s0.had_modified) block_for_requester = s0.data;
     else if (s1.had_modified) block_for_requester = s1.data;
-    else mem.read_block(addr, block_for_requester.data());
+    else mem.read_block(addr, reinterpret_cast<uint64_t *>(block_for_requester.data()));
 
     // bus grants exclusive ownership to requester (cache1) -> load block from bus with others_have=false
     cache1.load_block_from_bus(addr, block_for_requester.data(), /*others_have=*/false);
@@ -218,11 +214,13 @@ void test_memory(){
 
     // Finally check memory (if a writeback occurred earlier it would be reflected)
     uint8_t memblk[32];
-    mem.read_block(addr, memblk);
+    mem.read_block(addr, reinterpret_cast<uint64_t *>(memblk));
     std::cout << "Memory first 8 bytes: ";
     for (int i=0;i<8;i++) std::cout << (int)memblk[i] << " ";
     std::cout << "\n";
 }
+
+
 
 
 void processor_system_with_memory_facade(){
@@ -242,12 +240,12 @@ void processor_system_with_memory_facade(){
     }
 
     // Inicializar memoria con valores base 10,20,30,40 en direcciones 0,32,64,96
-    memory.write_block(0, (new uint8_t[1]{10}));
-    memory.write_block(32, (new uint8_t[1]{20}));
-    memory.write_block(64, (new uint8_t[1]{30}));
-    memory.write_block(96, (new uint8_t[1]{40}));
+    memory.write_block(0, (new uint64_t[1]{10}));
+    memory.write_block(32, (new uint64_t[1]{20}));
+    memory.write_block(64, (new uint64_t[1]{30}));
+    memory.write_block(96, (new uint64_t[1]{40}));
 
-    uint8_t data = 0;
+    uint64_t data = 0;
     // std::cout << "Initial memory contents:\n";
     for (size_t j = 0; j < 4; ++j) {
         memory.read_block(j * 32, &data);
@@ -338,7 +336,7 @@ void processor_system_dot_product() {
     auto write_block_words = [&](uint64_t base, const std::array<uint64_t,4>& words) {
         std::array<uint8_t,32> raw{};
         std::memcpy(raw.data(), words.data(), 32);
-        memory.write_block(base, raw.data());
+        memory.write_block(base, reinterpret_cast<const uint64_t *>(raw.data()));
     };
 
     for (int blk = 0; blk < 4; ++blk) {
@@ -366,7 +364,7 @@ void processor_system_dot_product() {
     for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).start(nullptr);
     system.joinAll();
 
-    std::array<uint8_t,32> resultRaw{}; memory.read_block(256, resultRaw.data());
+    std::array<uint8_t,32> resultRaw{}; memory.read_block(256, reinterpret_cast<uint64_t *>(resultRaw.data()));
     std::array<double,4> partials{}; for (int i = 0; i < 4; ++i) std::memcpy(&partials[i], resultRaw.data() + i*8, 8);
     double finalDot = partials[0] + partials[1] + partials[2] + partials[3];
 
@@ -421,12 +419,12 @@ void processor_system_dot_product_shared() {
 }
 
 int main(int argc, char* argv[]) {
-    processor_system_dot_product_shared();
-    std::cout << "\n";
-    processor_system_dot_product();
-    test_interconnect_full_mesi();
+    //processor_system_dot_product_shared();
+    //std::cout << "\n";
+    //processor_system_dot_product();
+    //test_interconnect_full_mesi();
     // std::cout << "\n\n";
-    // test_memory();
+    test_memory();
     // std::cout << "\n\n";
     // processor_system();
     // std::cout << "\n\n";
