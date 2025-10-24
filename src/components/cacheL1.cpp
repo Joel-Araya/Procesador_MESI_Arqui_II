@@ -43,68 +43,55 @@ void CacheL1::writeback_if_dirty(CacheLine* line, uint64_t index) {
 
 /* ------------------ Operaciones CPU-facing ------------------ */
 
-void CacheL1::write(uint64_t address, const uint8_t* data8) {
+void CacheL1::write(uint64_t address, uint64_t data64) { // cambiado firma
     uint64_t index = get_index(address);
     uint64_t tag = get_tag(address);
     uint64_t offset = get_offset(address);
 
     CacheLine* line = find_line(index, tag);
     if (!line) {
-        // Miss -> write-allocate: traer bloque de memoria al caché
         metrics_.misses++;
         CacheLine* victim = select_victim(index);
-
-        // Si la víctima está dirty -> write-back
         writeback_if_dirty(victim, index);
-
-        // Cargar bloque nuevo desde memoria
         uint64_t block_addr = ((tag * SETS) + index) * BLOCK_BYTES;
         memory_->read_block(block_addr, reinterpret_cast<uint64_t *>(victim->data.data()));
-
-        // Inicializar metadata
         victim->valid = true;
-        victim->dirty = false; // aún no escrito
+        victim->dirty = false;
         victim->tag = tag;
-        victim->state = MESI_State::EXCLUSIVE; // localmente asumimos exclusive (nadie más lo tiene todavía)
+        victim->state = MESI_State::EXCLUSIVE;
         line = victim;
     } else {
         metrics_.hits++;
-        // si estaba SHARED y vamos a escribir -> necesitaremos exclusividad global (Bus en capa superior)
     }
-
-    // Escribir los 8 bytes dentro del bloque
-    std::memcpy(line->data.data() + offset, data8, 8);
+    // escribir 8 bytes
+    std::memcpy(line->data.data() + offset, &data64, sizeof(uint64_t));
     line->dirty = true;
     line->state = MESI_State::MODIFIED;
 }
 
-void CacheL1::read(uint64_t address, uint8_t* out8) {
+uint64_t CacheL1::read(uint64_t address) { // cambiado firma
     uint64_t index = get_index(address);
     uint64_t tag = get_tag(address);
     uint64_t offset = get_offset(address);
 
     CacheLine* line = find_line(index, tag);
     if (!line) {
-        // Miss -> traer bloque desde memoria
         metrics_.misses++;
         CacheLine* victim = select_victim(index);
-
-        // Si la víctima está dirty -> write-back antes de sobreescribir
         writeback_if_dirty(victim, index);
-
         uint64_t block_addr = ((tag * SETS) + index) * BLOCK_BYTES;
         memory_->read_block(block_addr, reinterpret_cast<uint64_t *>(victim->data.data()));
-
         victim->valid = true;
         victim->dirty = false;
         victim->tag = tag;
-        victim->state = MESI_State::EXCLUSIVE; // localmente asumimos exclusive
+        victim->state = MESI_State::EXCLUSIVE;
         line = victim;
     } else {
         metrics_.hits++;
     }
-
-    std::memcpy(out8, line->data.data() + offset, 8);
+    uint64_t out64 = 0;
+    std::memcpy(&out64, line->data.data() + offset, sizeof(uint64_t));
+    return out64;
 }
 
 /* --------------- Métodos que usará el Bus (Snooping) ------------- */
@@ -210,7 +197,7 @@ void CacheL1::invalidate_line(uint64_t address) {
 MESI_State CacheL1::get_line_state(uint64_t address) const {
     uint64_t index = (address >> 5) & 0x7;
     uint64_t tag = (address >> 8);
-    for (int w=0; w<WAYS; ++w) {
+    for (int w=0;w<WAYS; ++w) {
         const CacheLine& ln = sets_[index][w];
         if (ln.valid && ln.tag == tag) return ln.state;
     }

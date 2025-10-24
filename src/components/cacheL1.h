@@ -13,9 +13,9 @@ class CacheL1 {
 public:
     CacheL1(int id, Memory* mem);
 
-    // API simple: leer/escribir 8 bytes (simulando palabra de 64-bit)
-    void write(uint64_t address, const uint8_t* data8);
-    void read(uint64_t address, uint8_t* out8);
+    // API simple: leer/escribir 8 bytes (palabra de 64-bit)
+    void write(uint64_t address, uint64_t data64); // cambiado
+    uint64_t read(uint64_t address);               // cambiado
 
     // --- MESI / Bus-facing iface (para que el Bus llame) ---
     // Resultado de snooping
@@ -44,7 +44,7 @@ public:
 
     void print_metrics() const;
 
-    static constexpr int BLOCK_BYTES = 32;
+    static constexpr int BLOCK_BYTES = 8;
 
 private:
     int id_;

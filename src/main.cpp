@@ -152,8 +152,8 @@ void test_memory(){
 
     uint64_t addr = 0x00; // mismo bloque
 
-    uint8_t A[8] = {1,2,3,4,5,6,7,8};
-    uint8_t out[8];
+    uint64_t A = 0x0807060504030201ULL; // empaquetar los 8 bytes
+    uint64_t out64 = 0;
 
     // 1) PE0 escribe -> cache0 pone la línea en M
     cache0.write(addr, A);
@@ -180,10 +180,8 @@ void test_memory(){
               << " cache1: " << static_cast<int>(cache1.get_line_state(addr)) << "\n";
 
     // cache1 lee (local hit)
-    cache1.read(addr, out);
-    std::cout << "cache1 read: ";
-    for (int i=0;i<8;i++) std::cout << (int)out[i] << " ";
-    std::cout << "\n";
+    out64 = cache1.read(addr);
+    std::cout << "cache1 read (64b): 0x" << std::hex << out64 << std::dec << "\n";
 
     // 3) Ahora PE1 quiere escribir -> BusRdX (invalida a otros)
     auto s0 = cache0.snoop_bus_rdx(addr);
@@ -202,7 +200,7 @@ void test_memory(){
               << " cache1: " << static_cast<int>(cache1.get_line_state(addr)) << "\n";
 
     // cache1 writes new data
-    uint8_t NEW[8] = {42,43,44,45,46,47,48,49};
+    uint64_t NEW = 0x31302F2E2D2C2B2AULL; // nuevos bytes 42..49 en ASCII aproximado
     cache1.write(addr, NEW);
 
     // Show final states & metrics
@@ -213,11 +211,9 @@ void test_memory(){
     cache1.print_metrics();
 
     // Finally check memory (if a writeback occurred earlier it would be reflected)
-    uint8_t memblk[32];
-    mem.read_block(addr, reinterpret_cast<uint64_t *>(memblk));
-    std::cout << "Memory first 8 bytes: ";
-    for (int i=0;i<8;i++) std::cout << (int)memblk[i] << " ";
-    std::cout << "\n";
+    uint64_t memblk_first8 = 0;
+    mem.read_block(addr, &memblk_first8);
+    std::cout << "Memory first 8 bytes (raw 64b): 0x" << std::hex << memblk_first8 << std::dec << "\n";
 }
 
 
@@ -340,20 +336,22 @@ void processor_system_dot_product() {
         uint64_t aBits; std::memcpy(&aBits, &aVal, 8);
         uint64_t bBits; std::memcpy(&bBits, &bVal, 8);
         const int baseArrB = 512;
-        memory.write_block(blk * 32, (new uint8_t[8]{static_cast<uint8_t>((blk + 1))}));
-        memory.write_block(baseArrB + blk * 32, (new uint8_t[8]{static_cast<uint8_t>(2 * (blk + 1))}));
+        memory.write_block(blk * 32, &aBits);
+        memory.write_block(baseArrB + blk * 32, &bBits);
     }
-    memory.write_block(1056, (new uint8_t[8]{0}));
-    memory.write_block(1088, (new uint8_t[8]{0}));
-    memory.write_block(1120, (new uint8_t[8]{0}));
-    memory.write_block(1156, (new uint8_t[1]{0}));
+    memory.write_block(1056, (new uint64_t[1]{0}));
+    memory.write_block(1088, (new uint64_t[1]{0}));
+    memory.write_block(1120, (new uint64_t[1]{0}));
+    memory.write_block(1156, (new uint64_t[1]{0}));
 
 
-    uint8_t data = 0;
-
+    uint64_t data = 0;
+    
+    
     for (size_t j = 0; j < 4; ++j) {
         memory.read_block(j * 32, &data);
-        std::cout << "Mem[" << j * 32 << "] = " << static_cast<int>(data) << "\n";
+        double a; std::memcpy(&a, &data, sizeof(uint64_t));
+        std::cout << "Mem[" << j * 32 << "] = " << a << "\n";
     }
 
     std::vector<Instruction> p0 = loadProgramFile("pe0.pec");
@@ -366,14 +364,15 @@ void processor_system_dot_product() {
 
     for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).start(nullptr);
     system.joinAll();
+    bus.stop();
 
     for (size_t j = 0; j < 4; ++j) {
         memory.read_block(j * 32 + 1024, &data);
-        std::cout << "Partials[" << j * 32 << "] = " << static_cast<int>(data) << "\n";
+        double a; std::memcpy(&a, &data, sizeof(uint64_t));
+        std::cout << "Partials[" << j * 32 + 1024 << "] = " << a << "\n";
     }
-
-    bus.stop();
     for (auto* f : facades) delete f; for (auto* c : caches) delete c;
+
 }
 
 void processor_system_dot_product_shared() {

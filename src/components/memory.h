@@ -10,7 +10,7 @@ public:
     static const int MEM_WORDS = 512;         // 512 palabras de 64 bits
     static const int WORD_BYTES = 8;          // 8 bytes por palabra
     static const int MEM_BYTES = MEM_WORDS * WORD_BYTES;
-    static const int BLOCK_BYTES = 32;        // tamaño de bloque de la caché
+    static const int BLOCK_BYTES = 8;        // tamaño de bloque de la caché
 
     Memory();
 

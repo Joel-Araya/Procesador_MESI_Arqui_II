@@ -16,8 +16,7 @@ void Memory::read_block(uint64_t address, uint64_t* out_block) const {
     if (base + BLOCK_BYTES > MEM_BYTES) {
         throw std::out_of_range("Memory::read_block: address out of range");
     }
-    std::memcpy(out_block, mem_.data() + base, 1); // Copia el bloque de memoria
-    // opcional: logging reducido
+    std::memcpy(out_block, mem_.data() + base, BLOCK_BYTES); // corregido
     std::cout << "[MEM] read_block @ 0x" << std::hex << base << std::dec << "\n";
 }
 
@@ -26,7 +25,7 @@ void Memory::write_block(uint64_t address, const uint64_t* in_block) {
     if (base + BLOCK_BYTES > MEM_BYTES) {
         throw std::out_of_range("Memory::write_block: address out of range");
     }
-    std::memcpy(mem_.data() + base, in_block, 1);
+    std::memcpy(mem_.data() + base, in_block, BLOCK_BYTES); // corregido
     std::cout << "[MEM] write_block @ 0x" << std::hex << base << std::dec << "\n";
 }
 

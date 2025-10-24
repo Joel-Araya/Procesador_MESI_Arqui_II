@@ -39,11 +39,16 @@ void BusInterconnect::add_request(const BusTransaction& transaction) {
 }
 
 void BusInterconnect::run() {
+    bool processing = true;
     while(!stop_flag_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         if (!request_queue_.empty()) {
             std::cout << "\n[BUS] Peticiones en cola. Iniciando ciclo de Arbitraje...\n";
             arbitrate_and_process();
+            processing = false;
+        } else if (!processing) {
+            std::cout << "[BUS] No hay más peticiones en cola. Esperando nuevas solicitudes...\n";
+            stop_flag_ = true;
         }
     }
 }
