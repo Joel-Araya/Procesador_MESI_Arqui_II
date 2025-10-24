@@ -370,6 +370,11 @@ void processor_system_dot_product(bool debug = false) {
     // flush caches antes de leer resultados
     for (auto* c : caches) c->flush();
 
+    for (auto* c : caches) {
+        c->print_metrics();
+        c->print_cache_lines();
+    }
+
     for (size_t j = 0; j < 4; ++j) {
         memory.read_word(j * 32 + 1024, &data);
         double a; std::memcpy(&a, &data, sizeof(uint64_t));
