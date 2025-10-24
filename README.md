@@ -18,7 +18,7 @@ Para ejecutar el código utilice:
 make run
 ```
 
-Para ejecutar el programa en modo debug:
+Para ejecutar el programa en modo debug (stepping):
 ```
 make debug
 ```
