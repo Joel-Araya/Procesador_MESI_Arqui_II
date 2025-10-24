@@ -3,6 +3,7 @@
 #include "Instruction.hpp"
 #include "SharedMemory.hpp"
 #include <cstring>
+#include <iostream>
 
 ProcessingElement::ProcessingElement(unsigned id) : m_id(id) {
     m_registers.fill(0);
@@ -85,6 +86,7 @@ void ProcessingElement::start(ThreadFunc func) {
                         uint64_t bBits = readReg(inst.rb);
                         double a, b; std::memcpy(&a, &aBits, sizeof(uint64_t)); std::memcpy(&b, &bBits, sizeof(uint64_t));
                         double r = a * b;
+                        if (m_id == 0) std::cout << "[PE " << m_id << "] FMUL: " << aBits << " * " << bBits << " = " << r << std::endl;
                         uint64_t raw; std::memcpy(&raw, &r, sizeof(uint64_t));
                         writeReg(inst.rd, raw);
                         m_pc++; break;
@@ -132,6 +134,7 @@ void ProcessingElement::start(ThreadFunc func) {
                     case OpCode::LOADR: {
                         uint64_t effective = readReg(inst.ra);
                         uint64_t val = m_mem ? m_mem->load(effective) : 0;
+                        if (m_id == 0) std::cout << "[PE " << m_id << "] LOAD from address 0x" << std::hex << effective << std::dec << " = " << val << std::endl;
                         writeReg(inst.rd, val);
                         m_pc++; break;
                     }
@@ -163,6 +166,7 @@ uint64_t ProcessingElement::readReg(size_t idx) const {
 void ProcessingElement::writeReg(size_t idx, uint64_t value) {
     if (idx >= REG_COUNT) throw std::out_of_range("Invalid register index");
     std::scoped_lock lock(m_regMutex);
+    if (m_id == 0) std::cout << "[PE " << m_id << "] Write Reg[" << idx << "] = " << value << std::endl;
     m_registers[idx] = value;
 }
 

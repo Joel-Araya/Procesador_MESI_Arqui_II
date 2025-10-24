@@ -5,8 +5,8 @@
 #include <cstring>
 
 // Incluye archivos de Components
-#include "components/CacheL1_test.h"
-#include "components/Memory_test.h"
+// #include "components/CacheL1_test.h"
+// #include "components/Memory_test.h"
 
 // Incluye archivos de Interconnect
 #include "interconnect/BusEnums.h"
@@ -325,6 +325,7 @@ void processor_system(){
 // Nueva función: prueba de producto punto distribuido en 4 PEs
 void processor_system_dot_product() {
     std::cout << "==== Dot Product distribuido ====" << std::endl;
+    std::cout << "Inicializando sistema con Memoria, Cachés y Bus..." << std::endl;
     ProcessorSystem system;
     Memory memory; // memoria compartida detrás de cachés
 
@@ -335,25 +336,27 @@ void processor_system_dot_product() {
     std::vector<MemoryFacade*> facades;
     for (int i = 0; i < 4; ++i) facades.push_back(new MemoryFacade(caches[i], &bus, i));
 
-    auto write_block_words = [&](uint64_t base, const std::array<uint64_t,4>& words) {
-        std::array<uint8_t,32> raw{};
-        std::memcpy(raw.data(), words.data(), 32);
-        memory.write_block(base, raw.data());
-    };
-
-    for (int blk = 0; blk < 4; ++blk) {
-        std::array<uint64_t,4> aWords{}; std::array<uint64_t,4> bWords{};
-        for (int k = 0; k < 4; ++k) {
-            int idx = blk*4 + k;
-            double aVal = static_cast<double>(idx + 1);
-            double bVal = static_cast<double>(2 * (idx + 1));
-            std::memcpy(&aWords[k], &aVal, 8);
-            std::memcpy(&bWords[k], &bVal, 8);
-        }
-        write_block_words(blk * 32, aWords);
-        write_block_words(128 + blk * 32, bWords);
+    for (int blk = 0; blk < 16; ++blk) {
+        double aVal = static_cast<double>(blk + 1);
+        double bVal = static_cast<double>(2 * (blk + 1));
+        uint64_t aBits; std::memcpy(&aBits, &aVal, 8);
+        uint64_t bBits; std::memcpy(&bBits, &bVal, 8);
+        const int baseArrB = 512;
+        memory.write_block(blk * 32, (new uint8_t[8]{static_cast<uint8_t>((blk + 1))}));
+        memory.write_block(baseArrB + blk * 32, (new uint8_t[8]{static_cast<uint8_t>(2 * (blk + 1))}));
     }
-    write_block_words(256, {0,0,0,0});
+    memory.write_block(1056, (new uint8_t[8]{0}));
+    memory.write_block(1088, (new uint8_t[8]{0}));
+    memory.write_block(1120, (new uint8_t[8]{0}));
+    memory.write_block(1156, (new uint8_t[1]{0}));
+
+
+    uint8_t data = 0;
+
+    for (size_t j = 0; j < 4; ++j) {
+        memory.read_block(j * 32, &data);
+        std::cout << "Mem[" << j * 32 << "] = " << static_cast<int>(data) << "\n";
+    }
 
     std::vector<Instruction> p0 = loadProgramFile("pe0.pec");
     std::vector<Instruction> p1 = loadProgramFile("pe1.pec");
@@ -366,11 +369,10 @@ void processor_system_dot_product() {
     for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).start(nullptr);
     system.joinAll();
 
-    std::array<uint8_t,32> resultRaw{}; memory.read_block(256, resultRaw.data());
-    std::array<double,4> partials{}; for (int i = 0; i < 4; ++i) std::memcpy(&partials[i], resultRaw.data() + i*8, 8);
-    double finalDot = partials[0] + partials[1] + partials[2] + partials[3];
-
-    std::cout << "Parciales: "; for (double p : partials) std::cout << p << " "; std::cout << "\nDot final = " << finalDot << std::endl;
+    for (size_t j = 0; j < 4; ++j) {
+        memory.read_block(j * 32 + 1024, &data);
+        std::cout << "Partials[" << j * 32 << "] = " << static_cast<int>(data) << "\n";
+    }
 
     bus.stop();
     for (auto* f : facades) delete f; for (auto* c : caches) delete c;
@@ -379,7 +381,7 @@ void processor_system_dot_product() {
 void processor_system_dot_product_shared() {
     std::cout << "==== Dot Product (SharedMemoryInstance) ====\n";
     ProcessorSystem system;
-    SharedMemoryInstance mem(512); // suficiente para direccionar hasta 280
+    SharedMemoryInstance mem(2048); // suficiente para direccionar hasta 280
 
     // Inicializar vectores A (base 0) y B (base 128) con 16 doubles
     for (int i = 0; i < 16; ++i) {
@@ -387,11 +389,11 @@ void processor_system_dot_product_shared() {
         double bVal = static_cast<double>(2 * (i + 1));
         uint64_t aBits; std::memcpy(&aBits, &aVal, 8);
         uint64_t bBits; std::memcpy(&bBits, &bVal, 8);
-        mem.store(i * 8, aBits);            // A[i]
-        mem.store(128 + i * 8, bBits);      // B[i]
+        mem.store(i * 32, aBits);            // A[i]
+        mem.store(512 + i * 32, bBits);      // B[i]
     }
     // Inicializar acumuladores parciales (direcciones 256,264,272,280)
-    for (int pe = 0; pe < 4; ++pe) mem.store(256 + pe * 8, 0);
+    for (int pe = 0; pe < 4; ++pe) mem.store(1024 + pe * 32, 0);
 
     // Cargar programas
     std::vector<Instruction> p0 = loadProgramFile("pe0.pec");
@@ -410,7 +412,7 @@ void processor_system_dot_product_shared() {
     // Leer parciales
     double partials[4];
     for (int pe = 0; pe < 4; ++pe) {
-        uint64_t raw = mem.load(256 + pe * 8);
+        uint64_t raw = mem.load(1024 + pe * 32);
         std::memcpy(&partials[pe], &raw, 8);
     }
     double finalDot = partials[0] + partials[1] + partials[2] + partials[3];
@@ -421,10 +423,10 @@ void processor_system_dot_product_shared() {
 }
 
 int main(int argc, char* argv[]) {
-    processor_system_dot_product_shared();
-    std::cout << "\n";
+    // processor_system_dot_product_shared();
+    std::cout << "PRUEBA PRODUCTO PUNTO DISTRIBUIDO EN 4 PEs CON CACHÉS Y BUS INTERCONNECT" << std::endl << std::flush;
     processor_system_dot_product();
-    test_interconnect_full_mesi();
+    // test_interconnect_full_mesi();
     // std::cout << "\n\n";
     // test_memory();
     // std::cout << "\n\n";

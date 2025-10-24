@@ -1,7 +1,7 @@
 ; PE3 looped dot partial
-MOVI R4, 96       ; base A offset (12*8)
-MOVI R5, 224      ; base B offset
-MOVI R6, 8
+MOVI R4, 384       ; base A offset (12*8)
+MOVI R5, 896      ; base B offset
+MOVI R6, 32
 MOVI R7, 4
 MOVI R0, 0
 LOOP3:
@@ -9,10 +9,10 @@ LOADR R1, R4
 LOADR R2, R5
 FMUL R3, R1, R2
 FADD R0, R0, R3
-ADDI R4, 8
-ADDI R5, 8
+ADDI R4, 32
+ADDI R5, 32
 DEC R7
 JNZ LOOP3
-MOVI R1, 280      ; resultado parcial PE3
+MOVI R1, 1152      ; resultado parcial PE3
 STORER R0, R1
 HALT
