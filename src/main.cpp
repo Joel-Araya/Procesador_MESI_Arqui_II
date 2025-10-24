@@ -380,12 +380,19 @@ void processor_system_dot_product(bool debug = false) {
         std::cout << "[MemoryFacade PE " << f->getPEId() << "] Load count: " << f->getLoadCount()
                   << ", Store count: " << f->getStoreCount() << "\n";
     }
-
+    double dot_product = 0.0;
     for (size_t j = 0; j < 4; ++j) {
         memory.read_word(j * 32 + 1024, &data);
         double a; std::memcpy(&a, &data, sizeof(uint64_t));
-        std::cout << "Partials[" << j * 32 + 1024 << "] = " << a << "\n";
+        dot_product += a;
     }
+    std::cout << "Producto punto calculado: " << dot_product << std::endl;
+
+    // for (size_t j = 0; j < 4; ++j) {
+    //     memory.read_word(j * 32 + 1024, &data);
+    //     double a; std::memcpy(&a, &data, sizeof(uint64_t));
+    //     std::cout << "Partials[" << j * 32 + 1024 << "] = " << a << "\n";
+    // }
     for (auto* f : facades) delete f; for (auto* c : caches) delete c;
 
 }
