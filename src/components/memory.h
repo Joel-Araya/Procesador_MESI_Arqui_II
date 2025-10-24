@@ -15,13 +15,13 @@ public:
     Memory();
 
     // Lee un bloque de 32 bytes alineado en 'address' (address puede ser cualquier byte; se alinea internamente)
-    void read_block(uint64_t address, uint8_t* out_block) const;
+    void read_block(uint64_t address, uint64_t* out_block) const;
 
     // Escribe un bloque de 32 bytes alineado en 'address' (address puede ser cualquier byte; se alinea internamente)
-    void write_block(uint64_t address, const uint8_t* in_block);
+    void write_block(uint64_t address, const uint64_t* in_block);
 
     // Lectura directa de bytes (para pruebas)
-    void read_bytes(uint64_t address, uint8_t* out_buf, size_t n) const;
+    void read_bytes(uint64_t address, uint64_t* out_buf, size_t n) const;
 
 private:
     std::array<uint8_t, MEM_BYTES> mem_ = std::array<uint8_t, MEM_BYTES>{0};
