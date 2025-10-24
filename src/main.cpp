@@ -70,7 +70,7 @@ void test_interconnect_full_mesi() {
     }
 
     // 2. Inicializar el Bus Interconnect
-    BusInterconnect bus(caches, &memory);
+    BusInterconnect bus(caches, &memory, false);
     
     // 3. Crear hilos de PEs y asignar cargas
     std::vector<std::thread> pe_threads;
@@ -228,7 +228,7 @@ void processor_system_with_memory_facade(){
         caches.push_back(new CacheL1(i, &memory));
     }
 
-    BusInterconnect bus(caches, &memory);
+    BusInterconnect bus(caches, &memory, false);
 
     std::vector<MemoryFacade*> memory_facades;
     for (int i = 0; i < 4; ++i) {
@@ -317,15 +317,15 @@ void processor_system(){
 }
 
 // Nueva función: prueba de producto punto distribuido en 4 PEs
-void processor_system_dot_product() {
+void processor_system_dot_product(bool debug = false) {
     std::cout << "==== Dot Product distribuido ====" << std::endl;
     std::cout << "Inicializando sistema con Memoria, Cachés y Bus..." << std::endl;
-    ProcessorSystem system;
+    ProcessorSystem system(debug);
     Memory memory; // memoria compartida detrás de cachés
 
     std::vector<CacheL1*> caches;
     for (int i = 0; i < 4; ++i) caches.push_back(new CacheL1(i, &memory));
-    BusInterconnect bus(caches, &memory);
+    BusInterconnect bus(caches, &memory, debug);
 
     std::vector<MemoryFacade*> facades;
     for (int i = 0; i < 4; ++i) facades.push_back(new MemoryFacade(caches[i], &bus, i));
@@ -364,6 +364,7 @@ void processor_system_dot_product() {
 
     for (size_t i = 0; i < ProcessorSystem::PE_COUNT; ++i) system.getPE(i).start(nullptr);
     system.joinAll();
+    std::cout << "Todos los PEs han terminado la ejecución.\n";
     bus.stop();
 
     // flush caches antes de leer resultados
@@ -424,8 +425,12 @@ void processor_system_dot_product_shared() {
 
 int main(int argc, char* argv[]) {
     // processor_system_dot_product_shared();
-    std::cout << "PRUEBA PRODUCTO PUNTO DISTRIBUIDO EN 4 PEs CON CACHÉS Y BUS INTERCONNECT" << std::endl << std::flush;
-    processor_system_dot_product();
+    if (argc > 1 && std::string(argv[1]) == "--debug") {
+        processor_system_dot_product(true);
+    } else {
+        std::cout << "PRUEBA PRODUCTO PUNTO DISTRIBUIDO EN 4 PEs CON CACHÉS Y BUS INTERCONNECT" << std::endl << std::flush;
+        processor_system_dot_product();
+    }
     // test_interconnect_full_mesi();
     //processor_system_dot_product_shared();
     //std::cout << "\n";

@@ -9,7 +9,7 @@ class ProcessorSystem {
 public:
     static constexpr size_t PE_COUNT = 4;
 
-    ProcessorSystem();
+    ProcessorSystem(bool debug = false);
 
     ProcessingElement& getPE(size_t idx);
     const ProcessingElement& getPE(size_t idx) const;

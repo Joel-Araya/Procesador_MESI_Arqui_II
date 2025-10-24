@@ -17,7 +17,7 @@ public:
 
     using ThreadFunc = std::function<void(ProcessingElement&)>;
 
-    ProcessingElement(unsigned id);
+    ProcessingElement(unsigned id, bool debug);
     ~ProcessingElement();
 
     // Non copyable
@@ -50,5 +50,6 @@ private:
     mutable std::mutex m_regMutex; // protect register access
     std::vector<Instruction> m_program;
     size_t m_pc{0};
+    bool m_debug{false};
     SharedMemory* m_mem{nullptr};
 };

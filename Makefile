@@ -69,7 +69,9 @@ test: all
 	@echo "🧪 Ejecutando prueba de concurrencia básica..."
 	./$(TARGET) test_mode
 
-	
+debug: all
+	@echo "🐞 Ejecutando el Simulador MESI en modo depuración..."
+	./$(TARGET) --debug
 # ------------------------------------------------------------------------------
 # Manejo de dependencias
 # ------------------------------------------------------------------------------

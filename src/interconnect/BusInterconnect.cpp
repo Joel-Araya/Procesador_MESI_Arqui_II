@@ -4,10 +4,11 @@
 #include <cstring>
 
 
-BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory)
+BusInterconnect::BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory, bool debug)
     : caches_(caches),
     memory_(memory),
-    running_(true)
+    running_(true),
+    debug_(debug)
 {
     std::cout << "BusInterconnect: Inicializando Interconector con " 
     << caches_.size() << " caches.\n";
@@ -31,6 +32,7 @@ BusInterconnect::~BusInterconnect(){
 
 void BusInterconnect::stop(){
     running_.store(false);
+    if (debug_) stop_flag_ = true;
     if (bus_thread_.joinable()) bus_thread_.join();
 }
 
@@ -46,7 +48,7 @@ void BusInterconnect::run() {
             std::cout << "\n[BUS] Peticiones en cola. Iniciando ciclo de Arbitraje...\n";
             arbitrate_and_process();
             processing = false;
-        } else if (!processing) {
+        } else if (!processing && !debug_) {
             std::cout << "[BUS] No hay más peticiones en cola. Esperando nuevas solicitudes...\n";
             stop_flag_ = true;
         }

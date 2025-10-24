@@ -13,7 +13,7 @@
 
 class BusInterconnect {
 public:
-    BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory);
+    BusInterconnect(std::vector<CacheL1*>& caches, Memory* memory, bool debug);
     ~BusInterconnect();
 
     // Funcion que se ejecuta en el hilo del Bus
@@ -32,6 +32,9 @@ private:
     std::mutex arbit_mutex_;
     int last_granted_pe_ = -1;
     std::atomic<bool> stop_flag_ = false;
+
+    // Variable para habilitar el modo de depuración
+    bool debug_;
 
     // Cola de peticiones del Bus
     ConcurrentQueue<BusTransaction> request_queue_;

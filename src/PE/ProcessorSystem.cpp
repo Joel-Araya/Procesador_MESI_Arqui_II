@@ -2,7 +2,7 @@
 #include "Instruction.hpp"
 #include <stdexcept>
 
-ProcessorSystem::ProcessorSystem() : m_pes{ ProcessingElement(0), ProcessingElement(1), ProcessingElement(2), ProcessingElement(3) } {}
+ProcessorSystem::ProcessorSystem(bool debug) : m_pes{ ProcessingElement(0, debug), ProcessingElement(1, debug), ProcessingElement(2, debug), ProcessingElement(3, debug) } {}
 
 ProcessingElement& ProcessorSystem::getPE(size_t idx) {
     if (idx >= PE_COUNT) throw std::out_of_range("Invalid PE index");
