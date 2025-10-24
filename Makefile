@@ -12,7 +12,7 @@ UTILS = $(SRCDIR)/utils
 PE = $(SRCDIR)/PE
 
 # Archivo ejecutable final
-TARGET = sim_mesi
+TARGET = MESI_simulator
 
 
 # ==============================================================================
