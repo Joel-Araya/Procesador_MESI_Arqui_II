@@ -46,6 +46,9 @@ public:
 
     static constexpr int BLOCK_BYTES = 32; // línea completa de 32 bytes
 
+    // Forzar write-back de todas las líneas sucias (flush al finalizar)
+    void flush();
+
 private:
     int id_;
     Memory* memory_;

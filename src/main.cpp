@@ -336,14 +336,14 @@ void processor_system_dot_product() {
         uint64_t aBits; std::memcpy(&aBits, &aVal, 8);
         uint64_t bBits; std::memcpy(&bBits, &bVal, 8);
         const int baseArrB = 512;
-        memory.write_block(blk * 32, &aBits);
-        memory.write_block(baseArrB + blk * 32, &bBits);
+        memory.write_word(blk * 32, &aBits); // usar write_word para una palabra
+        memory.write_word(baseArrB + blk * 32, &bBits);
     }
-    memory.write_block(1056, (new uint64_t[1]{0}));
-    memory.write_block(1088, (new uint64_t[1]{0}));
-    memory.write_block(1120, (new uint64_t[1]{0}));
-    memory.write_block(1156, (new uint64_t[1]{0}));
-
+    uint64_t zero = 0;
+    memory.write_word(1024, &zero);
+    memory.write_word(1056, &zero);
+    memory.write_word(1088, &zero);
+    memory.write_word(1120, &zero);
 
     uint64_t data = 0;
     
@@ -366,8 +366,11 @@ void processor_system_dot_product() {
     system.joinAll();
     bus.stop();
 
-    for (size_t j = 0; j < 8; ++j) {
-        memory.read_block(j * 32 + 1024, &data);
+    // flush caches antes de leer resultados
+    for (auto* c : caches) c->flush();
+
+    for (size_t j = 0; j < 4; ++j) {
+        memory.read_word(j * 32 + 1024, &data);
         double a; std::memcpy(&a, &data, sizeof(uint64_t));
         std::cout << "Partials[" << j * 32 + 1024 << "] = " << a << "\n";
     }

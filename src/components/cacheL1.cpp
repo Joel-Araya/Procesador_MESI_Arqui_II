@@ -221,3 +221,14 @@ void CacheL1::print_cache_lines() const {
 void CacheL1::print_metrics() const {
     metrics_.print(id_);
 }
+
+void CacheL1::flush() {
+    for (int idx=0; idx<SETS; ++idx) {
+        for (int w=0; w<WAYS; ++w) {
+            CacheLine* line = &sets_[idx][w];
+            if (line->valid && line->dirty) {
+                writeback_if_dirty(line, idx);
+            }
+        }
+    }
+}
