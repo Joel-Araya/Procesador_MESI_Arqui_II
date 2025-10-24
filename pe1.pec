@@ -1,0 +1,18 @@
+; PE1 looped dot partial
+MOVI R4, 128       ; base A offset (4*8)
+MOVI R5, 640      ; base B offset
+MOVI R6, 32
+MOVI R7, 4
+MOVI R0, 0
+LOOP1:
+LOADR R1, R4
+LOADR R2, R5
+FMUL R3, R1, R2
+FADD R0, R0, R3
+ADDI R4, 32
+ADDI R5, 32
+DEC R7
+JNZ LOOP1
+MOVI R1, 1056      ; resultado parcial PE1
+STORER R0, R1
+HALT

@@ -1,0 +1,15 @@
+.idea/
+sim_mesi
+obj/
+.idea/copilot.data.migration.agent.xml
+.idea/copilot.data.migration.ask.xml
+.idea/copilot.data.migration.edit.xml
+.idea/editor.xml
+.idea/misc.xml
+.idea/vcs.xml
+obj/components/cacheL1.o
+obj/components/memory.o
+obj/interconnect/BusInterconnect.o
+obj/main.o
+sim_mesi
+tests/
